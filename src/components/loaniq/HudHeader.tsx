@@ -1,10 +1,15 @@
-import { Link, useLocation } from "@tanstack/react-router";
-import { Activity, Database, History as HistoryIcon } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Activity, Database, History as HistoryIcon, Brain, LogIn, LogOut } from "lucide-react";
 import { useState } from "react";
 import { ScenarioHistoryDrawer } from "./ScenarioHistoryDrawer";
+import { useAuth } from "@/lib/auth/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) => void }) {
   const loc = useLocation();
+  const navigate = useNavigate();
+  const { session, isAdmin } = useAuth();
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const navItem = (to: string, label: string, Icon: typeof Activity) => {
@@ -24,6 +29,12 @@ export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) =>
     );
   };
 
+  async function signOut() {
+    await supabase.auth.signOut();
+    toast.success("Signed out");
+    navigate({ to: "/" });
+  }
+
   return (
     <header className="relative z-10 border-b border-border bg-panel/60 backdrop-blur">
       <div className="mx-auto flex max-w-[1800px] items-center justify-between px-6 py-3">
@@ -42,6 +53,7 @@ export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) =>
           <nav className="flex items-center">
             {navItem("/", "Matcher", Activity)}
             {navItem("/catalog", "Lender Catalog", Database)}
+            {isAdmin && navItem("/knowledge", "Knowledge", Brain)}
           </nav>
         </div>
 
@@ -50,13 +62,32 @@ export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) =>
             <div className="h-1.5 w-1.5 rounded-full bg-success animate-data-pulse" />
             <span className="text-hud text-[10px] text-muted-foreground">JARVIS ONLINE</span>
           </div>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="flex items-center gap-2 rounded-sm border border-border bg-panel/50 px-3 py-1.5 text-hud text-xs text-muted-foreground transition hover:border-cyan/60 hover:text-cyan"
-          >
-            <HistoryIcon className="h-3.5 w-3.5" />
-            History
-          </button>
+          {onLoadScenario && (
+            <button
+              onClick={() => setHistoryOpen(true)}
+              className="flex items-center gap-2 rounded-sm border border-border bg-panel/50 px-3 py-1.5 text-hud text-xs text-muted-foreground transition hover:border-cyan/60 hover:text-cyan"
+            >
+              <HistoryIcon className="h-3.5 w-3.5" />
+              History
+            </button>
+          )}
+          {session ? (
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 rounded-sm border border-border bg-panel/50 px-3 py-1.5 text-hud text-xs text-muted-foreground transition hover:border-cyan/60 hover:text-cyan"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign Out
+            </button>
+          ) : (
+            <Link
+              to="/auth"
+              className="flex items-center gap-2 rounded-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 text-hud text-xs text-cyan transition hover:bg-cyan/20"
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
 

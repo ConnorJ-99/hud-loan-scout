@@ -4,10 +4,11 @@ import { HudHeader } from "@/components/loaniq/HudHeader";
 import { JarvisCommandBar } from "@/components/loaniq/JarvisCommandBar";
 import { ScenarioForm } from "@/components/loaniq/ScenarioForm";
 import { ResultsPanel } from "@/components/loaniq/ResultsPanel";
-import type { BorrowerScenario, MatchResult, ScenarioHistoryEntry } from "@/lib/loaniq/types";
+import type { BorrowerScenario, Lender, LenderProduct, MatchResult, ScenarioHistoryEntry } from "@/lib/loaniq/types";
 import { ensureSeeded, store } from "@/lib/loaniq/storage";
 import { rankMatches } from "@/lib/loaniq/match";
 import { analyzeScenario } from "@/lib/loaniq/ai";
+import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
@@ -30,23 +31,33 @@ function Index() {
   const [scanning, setScanning] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [catalogLenders, setCatalogLenders] = useState<Lender[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<LenderProduct[]>([]);
 
-  useEffect(() => { ensureSeeded(); }, []);
+  useEffect(() => {
+    ensureSeeded();
+    loadCatalogFromDb().then(({ lenders, products }) => {
+      setCatalogLenders(lenders);
+      setCatalogProducts(products);
+    });
+  }, []);
 
   const handleScan = async (s: BorrowerScenario) => {
     setScanning(true);
     setScenario(s);
     setMatches([]);
     setAiAnalysis("");
-    // Brief delay so the radar sweep registers visually
     await new Promise((r) => setTimeout(r, 700));
-    const lenders = store.getLenders();
-    const products = store.getProducts();
+
+    // Always pull fresh catalog so newly committed knowledge feeds the match
+    const { lenders, products } = await loadCatalogFromDb();
+    setCatalogLenders(lenders);
+    setCatalogProducts(products);
+
     const ranked = rankMatches(s, products);
     setMatches(ranked);
     setScanning(false);
 
-    // Save to history
     const top = ranked[0];
     const topProduct = top ? products.find((p) => p.id === top.productId) : undefined;
     const topLender = topProduct ? lenders.find((l) => l.id === topProduct.lenderId) : undefined;
@@ -60,7 +71,6 @@ function Index() {
     };
     store.setHistory([entry, ...store.getHistory()].slice(0, 50));
 
-    // Kick off AI analysis
     setAiLoading(true);
     try {
       const out = await analyzeScenario(s, { lenders, products });
@@ -96,8 +106,8 @@ function Index() {
             <ResultsPanel
               scenario={scenario}
               matches={matches}
-              lenders={store.getLenders()}
-              products={store.getProducts()}
+              lenders={catalogLenders}
+              products={catalogProducts}
               scanning={scanning}
               aiAnalysis={aiAnalysis}
               aiLoading={aiLoading}

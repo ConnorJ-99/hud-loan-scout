@@ -14,16 +14,357 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ae_notes: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          lender_id: string
+          note: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lender_id: string
+          note: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lender_id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ae_notes_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lenders: {
+        Row: {
+          ae_email: string | null
+          ae_name: string | null
+          ae_phone: string | null
+          avg_turn_time_days: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          internal_experience: string | null
+          name: string
+          niche_advantages: string | null
+          reputation_notes: string | null
+          states_licensed: string[]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          ae_email?: string | null
+          ae_name?: string | null
+          ae_phone?: string | null
+          avg_turn_time_days?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          internal_experience?: string | null
+          name: string
+          niche_advantages?: string | null
+          reputation_notes?: string | null
+          states_licensed?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          ae_email?: string | null
+          ae_name?: string | null
+          ae_phone?: string | null
+          avg_turn_time_days?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          internal_experience?: string | null
+          name?: string
+          niche_advantages?: string | null
+          reputation_notes?: string | null
+          states_licensed?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      loan_programs: {
+        Row: {
+          bk_seasoning_months: number | null
+          competitive_advantages: string | null
+          created_at: string
+          created_by: string | null
+          dpa_available: boolean
+          dpa_min_fico: number | null
+          dscr_min: number | null
+          exception_policy: string | null
+          fc_seasoning_months: number | null
+          foreign_national_eligible: boolean
+          gift_funds_allowed: boolean
+          id: string
+          income_types: string[]
+          itin_eligible: boolean
+          lender_id: string
+          loan_program: string | null
+          loan_types: string[]
+          max_dti: number | null
+          max_loan_amount: number | null
+          max_ltv: number | null
+          min_fico: number | null
+          min_loan_amount: number | null
+          niche_advantages: string | null
+          notes: string | null
+          occupancies: string[]
+          product_name: string
+          product_type: string | null
+          property_types: string[]
+          reserve_months: number | null
+          seasoning_months: number | null
+          special_programs: string[]
+          states: string[]
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          bk_seasoning_months?: number | null
+          competitive_advantages?: string | null
+          created_at?: string
+          created_by?: string | null
+          dpa_available?: boolean
+          dpa_min_fico?: number | null
+          dscr_min?: number | null
+          exception_policy?: string | null
+          fc_seasoning_months?: number | null
+          foreign_national_eligible?: boolean
+          gift_funds_allowed?: boolean
+          id?: string
+          income_types?: string[]
+          itin_eligible?: boolean
+          lender_id: string
+          loan_program?: string | null
+          loan_types?: string[]
+          max_dti?: number | null
+          max_loan_amount?: number | null
+          max_ltv?: number | null
+          min_fico?: number | null
+          min_loan_amount?: number | null
+          niche_advantages?: string | null
+          notes?: string | null
+          occupancies?: string[]
+          product_name: string
+          product_type?: string | null
+          property_types?: string[]
+          reserve_months?: number | null
+          seasoning_months?: number | null
+          special_programs?: string[]
+          states?: string[]
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          bk_seasoning_months?: number | null
+          competitive_advantages?: string | null
+          created_at?: string
+          created_by?: string | null
+          dpa_available?: boolean
+          dpa_min_fico?: number | null
+          dscr_min?: number | null
+          exception_policy?: string | null
+          fc_seasoning_months?: number | null
+          foreign_national_eligible?: boolean
+          gift_funds_allowed?: boolean
+          id?: string
+          income_types?: string[]
+          itin_eligible?: boolean
+          lender_id?: string
+          loan_program?: string | null
+          loan_types?: string[]
+          max_dti?: number | null
+          max_loan_amount?: number | null
+          max_ltv?: number | null
+          min_fico?: number | null
+          min_loan_amount?: number | null
+          niche_advantages?: string | null
+          notes?: string | null
+          occupancies?: string[]
+          product_name?: string
+          product_type?: string | null
+          property_types?: string[]
+          reserve_months?: number | null
+          seasoning_months?: number | null
+          special_programs?: string[]
+          states?: string[]
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_programs_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overlays: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          lender_id: string | null
+          overlay_type: string
+          program_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          lender_id?: string | null
+          overlay_type: string
+          program_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          lender_id?: string | null
+          overlay_type?: string
+          program_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlays_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overlays_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "loan_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      raw_intel: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          extraction: Json | null
+          id: string
+          lender_id: string | null
+          raw_text: string
+          source_label: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          extraction?: Json | null
+          id?: string
+          lender_id?: string | null
+          raw_text: string
+          source_label?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          extraction?: Json | null
+          id?: string
+          lender_id?: string | null
+          raw_text?: string
+          source_label?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_intel_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +491,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
