@@ -165,7 +165,7 @@ export async function commitExtraction(
     {
       source_label: sourceLabel,
       raw_text: rawText,
-      extraction: extraction as unknown as Record<string, unknown>,
+      extraction: JSON.parse(JSON.stringify(extraction)),
       status: "committed",
       lender_id: lenderId,
     },
