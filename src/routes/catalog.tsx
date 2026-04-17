@@ -37,8 +37,13 @@ function CatalogPage() {
 
   useEffect(() => {
     ensureSeeded();
-    setLenders(store.getLenders());
-    setProducts(store.getProducts());
+    loadCatalogFromDb().then(({ lenders, products }) => {
+      setLenders(lenders);
+      setProducts(products);
+      // Mirror to local store so edits/CSV import paths keep working
+      store.setLenders(lenders);
+      store.setProducts(products);
+    });
   }, []);
 
   const productsByLender = useMemo(() => {
