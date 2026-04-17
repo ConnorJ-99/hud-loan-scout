@@ -1,10 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Lender, LenderProduct, IncomeType, PropertyType, Occupancy, LoanType, SpecialNeed } from "./types";
-import { seedLenders, seedProducts } from "./seed";
-import { store } from "./storage";
 
 // Pull lenders + programs from DB and convert to legacy LenderProduct/Lender shape
-// the matching engine + UI already understand. Falls back to local seed if DB empty.
+// the matching engine + UI already understand. Returns empty arrays when DB is empty —
+// no silent fallback to seed data.
 export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products: LenderProduct[] }> {
   try {
     const [lendersRes, programsRes] = await Promise.all([
@@ -18,12 +17,6 @@ export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products
 
     const dbLenders = lendersRes.data ?? [];
     const dbPrograms = programsRes.data ?? [];
-
-    if (dbLenders.length === 0 && dbPrograms.length === 0) {
-      // No DB data yet — fall back to seed so the app stays usable
-      return { lenders: store.getLenders().length ? store.getLenders() : seedLenders,
-               products: store.getProducts().length ? store.getProducts() : seedProducts };
-    }
 
     const lenders: Lender[] = dbLenders.map((l) => ({
       id: l.id,
@@ -57,7 +50,7 @@ export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products
 
     return { lenders, products };
   } catch (e) {
-    console.error("loadCatalogFromDb failed, falling back to seed", e);
-    return { lenders: seedLenders, products: seedProducts };
+    console.error("loadCatalogFromDb failed", e);
+    return { lenders: [], products: [] };
   }
 }

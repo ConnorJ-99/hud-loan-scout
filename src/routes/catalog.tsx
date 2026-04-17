@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { HudHeader } from "@/components/loaniq/HudHeader";
-import { ensureSeeded, store } from "@/lib/loaniq/storage";
+import { store } from "@/lib/loaniq/storage";
 import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import type { Lender, LenderProduct, IncomeType, LoanType, PropertyType, Occupancy, SpecialNeed } from "@/lib/loaniq/types";
 import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
@@ -36,7 +36,14 @@ function CatalogPage() {
   const [editingProduct, setEditingProduct] = useState<LenderProduct | null>(null);
 
   useEffect(() => {
-    ensureSeeded();
+    // One-time cleanup: purge stale demo seed data from localStorage so the
+    // catalog never falls back to fake lenders again.
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("loaniq.lenders.v1");
+        localStorage.removeItem("loaniq.products.v1");
+      } catch {}
+    }
     loadCatalogFromDb().then(({ lenders, products }) => {
       setLenders(lenders);
       setProducts(products);
@@ -157,6 +164,12 @@ function CatalogPage() {
           CSV columns: <span className="text-cyan">lenderId,productName,minFico,maxLtv,maxDti,incomeTypes,propertyTypes,loanTypes,dpaAvailable,dpaMinFico,giftFunds,occupancies,states,specialPrograms,notes,tags</span> &nbsp;(use | to separate multi-values)
         </div>
 
+        {lenders.length === 0 ? (
+          <div className="hud-panel rounded-md p-8 text-center">
+            <div className="text-hud text-cyan mb-2">CATALOG EMPTY</div>
+            <p className="text-sm text-muted-foreground">No lenders found. Sign in as an admin and use the Knowledge Center to add lenders, or import via CSV above.</p>
+          </div>
+        ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {lenders.map((l) => {
             const count = productsByLender[l.id]?.length ?? 0;
@@ -182,6 +195,7 @@ function CatalogPage() {
             );
           })}
         </div>
+        )}
 
         {activeLender && (
           <div className="hud-panel rounded-md p-4 animate-slide-up">

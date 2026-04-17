@@ -5,7 +5,7 @@ import { JarvisCommandBar } from "@/components/loaniq/JarvisCommandBar";
 import { ScenarioForm } from "@/components/loaniq/ScenarioForm";
 import { ResultsPanel } from "@/components/loaniq/ResultsPanel";
 import type { BorrowerScenario, Lender, LenderProduct, MatchResult, ScenarioHistoryEntry } from "@/lib/loaniq/types";
-import { ensureSeeded, store } from "@/lib/loaniq/storage";
+import { store } from "@/lib/loaniq/storage";
 import { rankMatches } from "@/lib/loaniq/match";
 import { analyzeScenario } from "@/lib/loaniq/ai";
 import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
@@ -35,7 +35,13 @@ function Index() {
   const [catalogProducts, setCatalogProducts] = useState<LenderProduct[]>([]);
 
   useEffect(() => {
-    ensureSeeded();
+    // One-time cleanup: purge stale demo seed data from localStorage
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("loaniq.lenders.v1");
+        localStorage.removeItem("loaniq.products.v1");
+      } catch {}
+    }
     loadCatalogFromDb().then(({ lenders, products }) => {
       setCatalogLenders(lenders);
       setCatalogProducts(products);

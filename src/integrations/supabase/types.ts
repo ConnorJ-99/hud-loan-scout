@@ -47,6 +47,13 @@ export type Database = {
             referencedRelation: "lenders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ae_notes_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lenders: {
@@ -217,6 +224,13 @@ export type Database = {
             referencedRelation: "lenders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loan_programs_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       overlays: {
@@ -253,6 +267,13 @@ export type Database = {
             columns: ["lender_id"]
             isOneToOne: false
             referencedRelation: "lenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overlays_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders_public"
             referencedColumns: ["id"]
           },
           {
@@ -327,6 +348,13 @@ export type Database = {
             referencedRelation: "lenders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "raw_intel_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "lenders_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -352,7 +380,45 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      lenders_public: {
+        Row: {
+          avg_turn_time_days: number | null
+          created_at: string | null
+          id: string | null
+          internal_experience: string | null
+          name: string | null
+          niche_advantages: string | null
+          reputation_notes: string | null
+          states_licensed: string[] | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          avg_turn_time_days?: number | null
+          created_at?: string | null
+          id?: string | null
+          internal_experience?: string | null
+          name?: string | null
+          niche_advantages?: string | null
+          reputation_notes?: string | null
+          states_licensed?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          avg_turn_time_days?: number | null
+          created_at?: string | null
+          id?: string | null
+          internal_experience?: string | null
+          name?: string | null
+          niche_advantages?: string | null
+          reputation_notes?: string | null
+          states_licensed?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
