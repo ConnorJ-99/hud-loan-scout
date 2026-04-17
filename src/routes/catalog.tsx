@@ -164,6 +164,12 @@ function CatalogPage() {
           CSV columns: <span className="text-cyan">lenderId,productName,minFico,maxLtv,maxDti,incomeTypes,propertyTypes,loanTypes,dpaAvailable,dpaMinFico,giftFunds,occupancies,states,specialPrograms,notes,tags</span> &nbsp;(use | to separate multi-values)
         </div>
 
+        {lenders.length === 0 ? (
+          <div className="hud-panel rounded-md p-8 text-center">
+            <div className="text-hud text-cyan mb-2">CATALOG EMPTY</div>
+            <p className="text-sm text-muted-foreground">No lenders found. Sign in as an admin and use the Knowledge Center to add lenders, or import via CSV above.</p>
+          </div>
+        ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {lenders.map((l) => {
             const count = productsByLender[l.id]?.length ?? 0;
@@ -189,6 +195,7 @@ function CatalogPage() {
             );
           })}
         </div>
+        )}
 
         {activeLender && (
           <div className="hud-panel rounded-md p-4 animate-slide-up">
