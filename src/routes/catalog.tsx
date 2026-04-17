@@ -36,7 +36,14 @@ function CatalogPage() {
   const [editingProduct, setEditingProduct] = useState<LenderProduct | null>(null);
 
   useEffect(() => {
-    ensureSeeded();
+    // One-time cleanup: purge stale demo seed data from localStorage so the
+    // catalog never falls back to fake lenders again.
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("loaniq.lenders.v1");
+        localStorage.removeItem("loaniq.products.v1");
+      } catch {}
+    }
     loadCatalogFromDb().then(({ lenders, products }) => {
       setLenders(lenders);
       setProducts(products);
