@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { HudHeader } from "@/components/loaniq/HudHeader";
-import { ensureSeeded, store } from "@/lib/loaniq/storage";
+import { store } from "@/lib/loaniq/storage";
 import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import type { Lender, LenderProduct, IncomeType, LoanType, PropertyType, Occupancy, SpecialNeed } from "@/lib/loaniq/types";
 import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
