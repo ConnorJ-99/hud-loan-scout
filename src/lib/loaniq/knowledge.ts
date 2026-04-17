@@ -161,13 +161,15 @@ export async function commitExtraction(
   }
 
   // Save raw intel record
-  await supabase.from("raw_intel").insert({
-    source_label: sourceLabel,
-    raw_text: rawText,
-    extraction: extraction as unknown as Record<string, unknown>,
-    status: "committed",
-    lender_id: lenderId,
-  });
+  await supabase.from("raw_intel").insert([
+    {
+      source_label: sourceLabel,
+      raw_text: rawText,
+      extraction: extraction as unknown as Record<string, unknown>,
+      status: "committed",
+      lender_id: lenderId,
+    },
+  ]);
 
   return { lenderId, programIds };
 }
