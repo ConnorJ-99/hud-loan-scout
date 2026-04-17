@@ -34,6 +34,8 @@ function CatalogPage() {
   const [activeLender, setActiveLender] = useState<string | null>(null);
   const [editingLender, setEditingLender] = useState<Lender | null>(null);
   const [editingProduct, setEditingProduct] = useState<LenderProduct | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     // One-time cleanup: purge stale demo seed data from localStorage so the
@@ -44,13 +46,21 @@ function CatalogPage() {
         localStorage.removeItem("loaniq.products.v1");
       } catch {}
     }
-    loadCatalogFromDb().then(({ lenders, products }) => {
-      setLenders(lenders);
-      setProducts(products);
-      // Mirror to local store so edits/CSV import paths keep working
-      store.setLenders(lenders);
-      store.setProducts(products);
-    });
+    setLoading(true);
+    setLoadError(null);
+    loadCatalogFromDb()
+      .then(({ lenders, products }) => {
+        console.log("[catalog] loaded from DB:", lenders.length, "lenders,", products.length, "products");
+        setLenders(lenders);
+        setProducts(products);
+        store.setLenders(lenders);
+        store.setProducts(products);
+      })
+      .catch((e) => {
+        console.error("[catalog] load failed", e);
+        setLoadError(e?.message ?? String(e));
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const productsByLender = useMemo(() => {
