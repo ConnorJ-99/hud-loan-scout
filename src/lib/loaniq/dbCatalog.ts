@@ -51,6 +51,6 @@ export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products
     return { lenders, products };
   } catch (e) {
     console.error("loadCatalogFromDb failed", e);
-    return { lenders: [], products: [] };
+    throw e;
   }
 }
