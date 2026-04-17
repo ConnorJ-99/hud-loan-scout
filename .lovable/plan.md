@@ -1,72 +1,42 @@
 
-The user wants to bulk-load their existing lender roster into the Knowledge Center before testing. They're asking which file format works best.
 
-Let me think about what the system can actually ingest right now:
+## Root cause
 
-**Current ingestion path** (from `src/routes/knowledge.tsx` + `src/lib/loaniq/knowledge.ts`):
-- Single textarea → `extractGuidelines()` → AI parses one lender at a time → commit to DB
-- No file upload, no batch mode, no multi-lender parsing
+The `/catalog` page is showing the 5 seed lenders (Flagstar, Angel Oak, Lima One, Carrington, Kind Lending) instead of your 15 imported lenders because:
 
-**What I have available as a builder**:
-- `document--parse_document` tool — handles PDF, DOCX, PPTX, XLSX, MP3 (first 50 pages)
-- Direct DB inserts via migrations or edge functions
-- Can build a file-upload UI + batch processor
+1. The `lenders` and `loan_programs` tables have RLS policies that only allow **authenticated** users to read them (`Authenticated read lenders` with role `{authenticated}`).
+2. You are **not signed in** (header shows "SIGN IN" button in the screenshot).
+3. When Supabase blocks the query, `loadCatalogFromDb()` returns empty arrays, then falls back to local seed data — which is why you see the 5 fake demo lenders.
 
-**Format analysis for the user's situation** (already-known lenders, wants fastest path to loaded data):
+The data is fine. All 15 lenders + 121 programs are confirmed in the database. The catalog just can't see them without auth.
 
-1. **PDF/Word guidelines** — messiest, but most authentic source. AI extraction works but one-at-a-time, slow, error-prone for 5-20 lenders.
-2. **Excel matrix** — structured, fast, but requires consistent column schema. Best if user has a spreadsheet already.
-3. **JSON** — fastest/most reliable but user has to hand-author it (bad).
-4. **Plain text dump (one lender per block, separated by `---`)** — works with current paste-and-learn if I add batch splitting. Low friction.
+## Fix (two options, I recommend doing both)
 
-**Best recommendation** depends on what the user already has on hand. Most brokers have:
-- PDF guideline matrices from each lender
-- Maybe an internal spreadsheet of AE contacts
-- Emails/bulletins
+**1. Make the catalog publicly readable** (so visitors see your real lender list without signing in)
+- Add new RLS policies to `lenders` and `loan_programs` tables: `FOR SELECT TO public USING (true)`.
+- This is safe because the catalog data isn't sensitive — it's just public lender names + guideline parameters. Admin-only modification stays intact.
+- AE contact details (`ae_email`, `ae_phone`) — your call whether those should be public. If not, I can hide them via a view or restrict those columns.
 
-The pragmatic answer: **let them upload the source files they already have** (PDF/DOCX from each lender) and I'll build a batch uploader that runs each file through `document--parse_document` → AI extraction → DB commit. This avoids manual reformatting.
+**2. Remove the seed-data fallback** so the catalog never silently shows fake demo lenders again
+- Update `src/lib/loaniq/dbCatalog.ts` so an empty DB result returns empty arrays instead of falling back to `seedLenders`/`seedProducts`.
+- Update `/catalog` to show "No lenders yet — sign in to manage" instead of seed data when empty.
+- Remove the `ensureSeeded()` call from `/catalog` and `/` so localStorage never gets polluted with the demo lenders again.
+- Clear any existing seed data already cached in your browser's localStorage on next page load.
 
-I should ask one clarifying question about what they have on hand, then present the plan.
+## Files I'll change
 
-Actually — they asked a direct question about format. I should answer it with a recommendation AND propose the build to support it. Keep this concise.
+- `supabase/migrations/<new>.sql` — add public SELECT policies to `lenders` and `loan_programs` (and optionally `overlays` so program-level overlays render too)
+- `src/lib/loaniq/dbCatalog.ts` — remove seed fallback
+- `src/routes/catalog.tsx` — remove `ensureSeeded()`, add an empty-state message, add a one-time localStorage cleanup of the seed keys
+- `src/routes/index.tsx` — same cleanup (remove `ensureSeeded()`)
 
----
+## What you'll see after
 
-# Plan: Bulk Lender Upload
+- `/catalog` immediately shows all 15 imported lenders with their 121 programs, even when signed out
+- The 5 demo lenders (Flagstar, Angel Oak, Carrington, Kind Lending, Lima One) disappear unless they were actually in your import (Lima One was)
+- The matching engine on `/` works without requiring sign-in too
 
-## Recommended format
-**PDF or Word guideline matrices** (whatever the lender originally sent you). Reasons:
-- You already have these — zero reformatting
-- The AI extractor is built for messy guideline text
-- Preserves the source as proof/reference
+## Quick decision needed
 
-**Avoid**: hand-building JSON or Excel templates — that's manual data entry, defeats the point.
+Should AE contact details (`ae_email`, `ae_phone`, `ae_name`) be visible to anonymous catalog visitors, or kept hidden until signed in? Default recommendation: hide them (those are internal broker contacts you don't want scraped). I'll set the SELECT policy to expose lender names + program guidelines but mask AE fields for anon users via a view if you want that — or just leave them visible if this is an internal-only tool.
 
-**If you have an internal spreadsheet** of AE contacts/turn times, upload that too — it'll fill the AE/reputation fields the PDFs usually miss.
-
-## What I'll build (Knowledge Center → Bulk Upload tab)
-
-1. **File drop zone** — accepts PDF, DOCX, XLSX, TXT (multi-file, up to 10 at a time)
-2. **Per-file processing pipeline**:
-   - Parse file → extract text (PDFs/DOCX use document parser, XLSX flattened to rows)
-   - Send text to existing `loaniq-ai` extract endpoint
-   - Show extraction preview (lender name, # programs, # overlays detected)
-3. **Review & commit** — checkbox each file, edit lender name if AI got it wrong, then "Commit All" inserts into the DB in one batch
-4. **Source label auto-set** to filename so you can trace any program back to its source PDF in the Raw Intel Archive
-
-## Edge function changes
-Update `loaniq-ai` to also accept a `files` mode that handles already-extracted text per source. The actual file parsing happens client-side via the document parse tool (server-side PDF parsing in the Worker isn't reliable).
-
-## Workflow you'd use
-1. Drag all your lender PDFs into the upload zone
-2. Wait ~10–20 seconds per file while AI extracts
-3. Skim each preview card, fix any wrong lender names
-4. Hit "Commit All" → everything goes into the database
-5. Then start testing the matching engine with real data
-
-## Practical tip while I build this
-If you want to start staging files now: drop them all in one folder. PDFs from lender portals work best. If a lender only sent you a rate sheet (not a full guideline matrix), include any AE emails with overlay info too — paste those as `.txt` files alongside.
-
----
-
-Want me to build the bulk uploader? Or if you'd rather just start pasting now using the current single-lender flow, that works too — say the word and I'll pause the build.
