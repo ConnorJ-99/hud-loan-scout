@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { HudHeader } from "@/components/loaniq/HudHeader";
 import { ensureSeeded, store } from "@/lib/loaniq/storage";
+import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import type { Lender, LenderProduct, IncomeType, LoanType, PropertyType, Occupancy, SpecialNeed } from "@/lib/loaniq/types";
 import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
@@ -36,8 +37,13 @@ function CatalogPage() {
 
   useEffect(() => {
     ensureSeeded();
-    setLenders(store.getLenders());
-    setProducts(store.getProducts());
+    loadCatalogFromDb().then(({ lenders, products }) => {
+      setLenders(lenders);
+      setProducts(products);
+      // Mirror to local store so edits/CSV import paths keep working
+      store.setLenders(lenders);
+      store.setProducts(products);
+    });
   }, []);
 
   const productsByLender = useMemo(() => {
