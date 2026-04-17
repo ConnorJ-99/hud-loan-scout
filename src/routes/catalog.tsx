@@ -174,10 +174,21 @@ function CatalogPage() {
           CSV columns: <span className="text-cyan">lenderId,productName,minFico,maxLtv,maxDti,incomeTypes,propertyTypes,loanTypes,dpaAvailable,dpaMinFico,giftFunds,occupancies,states,specialPrograms,notes,tags</span> &nbsp;(use | to separate multi-values)
         </div>
 
-        {lenders.length === 0 ? (
+        {loading ? (
+          <div className="hud-panel rounded-md p-8 text-center">
+            <div className="text-hud text-cyan mb-2 animate-pulse">LOADING CATALOG…</div>
+            <p className="text-xs text-mono text-muted-foreground">// querying lender database</p>
+          </div>
+        ) : loadError ? (
+          <div className="hud-panel rounded-md p-8 text-center border-destructive">
+            <div className="text-hud text-destructive mb-2">CATALOG LOAD FAILED</div>
+            <p className="text-sm text-muted-foreground">{loadError}</p>
+            <p className="text-xs text-mono text-muted-foreground mt-2">// open browser console for details</p>
+          </div>
+        ) : lenders.length === 0 ? (
           <div className="hud-panel rounded-md p-8 text-center">
             <div className="text-hud text-cyan mb-2">CATALOG EMPTY</div>
-            <p className="text-sm text-muted-foreground">No lenders found. Sign in as an admin and use the Knowledge Center to add lenders, or import via CSV above.</p>
+            <p className="text-sm text-muted-foreground">No lenders found in database.</p>
           </div>
         ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
