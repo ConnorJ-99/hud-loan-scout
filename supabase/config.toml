@@ -1,1 +1,4 @@
 project_id = "hvhstpaiherhsyuzjwef"
+
+[functions.loaniq-ai]
+verify_jwt = false
