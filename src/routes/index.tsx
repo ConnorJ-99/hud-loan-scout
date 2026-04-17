@@ -5,7 +5,7 @@ import { JarvisCommandBar } from "@/components/loaniq/JarvisCommandBar";
 import { ScenarioForm } from "@/components/loaniq/ScenarioForm";
 import { ResultsPanel } from "@/components/loaniq/ResultsPanel";
 import type { BorrowerScenario, Lender, LenderProduct, MatchResult, ScenarioHistoryEntry } from "@/lib/loaniq/types";
-import { ensureSeeded, store } from "@/lib/loaniq/storage";
+import { store } from "@/lib/loaniq/storage";
 import { rankMatches } from "@/lib/loaniq/match";
 import { analyzeScenario } from "@/lib/loaniq/ai";
 import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
