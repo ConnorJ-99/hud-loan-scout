@@ -151,7 +151,7 @@ export const seedProducts: LenderProduct[] = [
     maxLtv: 96.5,
     maxDti: 56.99,
     incomeTypesAllowed: ["W2", "Self-Employed 1099"],
-    propertyTypesAllowed: ["SFR", "Condo", "2-4 Unit", "Manufactured Home" as never].filter(Boolean) as never,
+    propertyTypesAllowed: ["SFR", "Condo", "2-4 Unit"],
     loanTypes: ["FHA", "VA", "USDA"],
     dpaAvailable: true,
     dpaMinFico: 600,
