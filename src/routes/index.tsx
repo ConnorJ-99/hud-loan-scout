@@ -35,7 +35,13 @@ function Index() {
   const [catalogProducts, setCatalogProducts] = useState<LenderProduct[]>([]);
 
   useEffect(() => {
-    ensureSeeded();
+    // One-time cleanup: purge stale demo seed data from localStorage
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("loaniq.lenders.v1");
+        localStorage.removeItem("loaniq.products.v1");
+      } catch {}
+    }
     loadCatalogFromDb().then(({ lenders, products }) => {
       setCatalogLenders(lenders);
       setCatalogProducts(products);
