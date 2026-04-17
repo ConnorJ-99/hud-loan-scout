@@ -34,6 +34,12 @@ export const Route = createRootRoute({
       { name: "author", content: "LoanIQ" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "LoanIQ — Mortgage Intelligence" },
+      { name: "twitter:title", content: "LoanIQ — Mortgage Intelligence" },
+      { property: "og:description", content: "AI-powered mortgage product matching for brokers." },
+      { name: "twitter:description", content: "AI-powered mortgage product matching for brokers." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8ac33034-ecae-40ed-8590-f0f6ad0fc084/id-preview-14cdd64b--294a9876-365a-48d3-aa68-8fb5e88be5cf.lovable.app-1776459235782.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8ac33034-ecae-40ed-8590-f0f6ad0fc084/id-preview-14cdd64b--294a9876-365a-48d3-aa68-8fb5e88be5cf.lovable.app-1776459235782.png" },
     ],
     links: [
       {
