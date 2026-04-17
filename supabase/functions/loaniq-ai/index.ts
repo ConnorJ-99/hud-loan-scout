@@ -27,21 +27,103 @@ Format your response in markdown with sections:
 **Deal-Breakers / Overlays to Watch** — any flags.
 **Strategy** — broker's next move (structure suggestions, layered programs, etc.).`;
 
+const SYSTEM_EXTRACT = `You are LoanIQ's Knowledge Extractor. The user pastes raw, messy mortgage guideline text — lender matrices, product guidelines, underwriting overlays, investor emails, broker bulletins, AE updates, PDF text extracts, program announcements.
+
+Your job: extract structured lender intelligence and return STRICT JSON only (no prose, no markdown). The JSON shape MUST be:
+
+{
+  "lender": {
+    "name": string,
+    "ae_name": string|null,
+    "ae_email": string|null,
+    "ae_phone": string|null,
+    "website": string|null,
+    "states_licensed": string[],
+    "reputation_notes": string|null,
+    "avg_turn_time_days": number|null,
+    "niche_advantages": string|null
+  },
+  "programs": [
+    {
+      "product_name": string,
+      "loan_program": string|null,
+      "product_type": string|null,
+      "min_fico": number|null,
+      "max_ltv": number|null,
+      "max_dti": number|null,
+      "reserve_months": number|null,
+      "occupancies": string[],
+      "property_types": string[],
+      "income_types": string[],
+      "loan_types": string[],
+      "states": string[],
+      "min_loan_amount": number|null,
+      "max_loan_amount": number|null,
+      "seasoning_months": number|null,
+      "bk_seasoning_months": number|null,
+      "fc_seasoning_months": number|null,
+      "dscr_min": number|null,
+      "foreign_national_eligible": boolean,
+      "itin_eligible": boolean,
+      "dpa_available": boolean,
+      "dpa_min_fico": number|null,
+      "gift_funds_allowed": boolean,
+      "exception_policy": string|null,
+      "niche_advantages": string|null,
+      "competitive_advantages": string|null,
+      "special_programs": string[],
+      "notes": string|null,
+      "tags": string[]
+    }
+  ],
+  "overlays": [
+    { "overlay_type": string, "description": string, "applies_to_program": string|null }
+  ],
+  "summary": string
+}
+
+Rules:
+- If the lender name is not stated, infer from context or use "Unknown Lender".
+- LTVs and DTIs are PERCENT numbers (e.g. 80, 45). Not decimals.
+- Use ISO state codes (CA, TX, FL, ALL).
+- Empty arrays not null for array fields.
+- Return ONLY the JSON object. No backticks, no commentary.`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { mode, query, scenario, catalog } = await req.json();
+    const body = await req.json();
+    const { mode, query, scenario, catalog, rawText } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const system = mode === "scenario" ? SYSTEM_SCENARIO : SYSTEM_QUERY;
-    const userContent =
-      mode === "scenario"
-        ? `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`
-        : `QUESTION: ${query}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
+    let system: string;
+    let userContent: string;
+    let responseFormat: Record<string, unknown> | undefined;
+
+    if (mode === "scenario") {
+      system = SYSTEM_SCENARIO;
+      userContent = `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
+    } else if (mode === "extract") {
+      system = SYSTEM_EXTRACT;
+      userContent = `RAW GUIDELINE TEXT:\n${rawText}`;
+      responseFormat = { type: "json_object" };
+    } else {
+      system = SYSTEM_QUERY;
+      userContent = `QUESTION: ${query}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
+    }
+
+    const requestBody: Record<string, unknown> = {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userContent },
+      ],
+    };
+    if (responseFormat) requestBody.response_format = responseFormat;
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -49,13 +131,7 @@ serve(async (req) => {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userContent },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!resp.ok) {
@@ -81,6 +157,24 @@ serve(async (req) => {
 
     const data = await resp.json();
     const content = data?.choices?.[0]?.message?.content ?? "";
+
+    if (mode === "extract") {
+      // Best-effort parse — strip code fences if model added them
+      const cleaned = content.replace(/^```json\s*|\s*```$/g, "").trim();
+      try {
+        const parsed = JSON.parse(cleaned);
+        return new Response(JSON.stringify({ extraction: parsed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        console.error("extract parse fail", e, cleaned.slice(0, 400));
+        return new Response(
+          JSON.stringify({ error: "Could not parse AI extraction. Try again or paste smaller chunks." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     return new Response(JSON.stringify({ content }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
