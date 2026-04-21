@@ -96,6 +96,9 @@ function KnowledgePage() {
             <TabsTrigger value="paste" className="font-hud tracking-wider">
               <Brain className="h-4 w-4 mr-2" /> PASTE & LEARN
             </TabsTrigger>
+            <TabsTrigger value="notes" className="font-hud tracking-wider">
+              <MessageSquarePlus className="h-4 w-4 mr-2" /> QUICK NOTES
+            </TabsTrigger>
             <TabsTrigger value="manual" className="font-hud tracking-wider">
               <Database className="h-4 w-4 mr-2" /> MANUAL BUILDER
             </TabsTrigger>
@@ -106,6 +109,9 @@ function KnowledgePage() {
 
           <TabsContent value="paste" className="mt-6">
             <PasteAndLearn />
+          </TabsContent>
+          <TabsContent value="notes" className="mt-6">
+            <QuickNotes />
           </TabsContent>
           <TabsContent value="manual" className="mt-6">
             <ManualBuilder />
