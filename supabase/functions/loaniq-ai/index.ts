@@ -211,6 +211,7 @@ serve(async (req) => {
     if (responseFormat) requestBody.response_format = responseFormat;
     if (useTools) {
       requestBody.tools = [RECOMMEND_PRODUCTS_TOOL];
+      requestBody.tool_choice = "auto";
     }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
