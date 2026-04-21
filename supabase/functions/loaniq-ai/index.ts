@@ -15,17 +15,12 @@ RULES:
 1. Keep EVERY response under 50 words. Be direct.
 2. Ask at most ONE clarifying question per turn — only if truly needed (e.g. FICO, occupancy, income type, veteran status, loan amount). Skip questions you can infer.
 3. NEVER list product names, FICO ranges, LTV, DTI, or ANY product details in your text. The UI renders cards automatically.
-4. When you find matching products, say something brief like "Found 2 options that work." and append the product IDs block.
-5. ALWAYS append the matched_products block when you reference ANY product. No exceptions.
-6. If user says "FHA" → only FHA. "Conventional" → only Conventional. Never mix unless asked.
-7. Exclude rehab/renovation unless asked.
-8. Filter products for Texas (states array contains "TX" or "ALL").
-9. When in doubt, show products and ask "Any of these work?" rather than asking more questions.
-
-PRODUCT ID FORMAT (append at end EVERY TIME):
-\`\`\`matched_products
-["exact-product-id-1","exact-product-id-2"]
-\`\`\``;
+4. When you find matching products, say something brief like "Found 2 options that work." — the UI handles showing the details.
+5. If user says "FHA" → only FHA. "Conventional" → only Conventional. Never mix unless asked.
+6. Exclude rehab/renovation unless asked.
+7. Filter products for Texas (states array contains "TX" or "ALL").
+8. When in doubt, show products and ask "Any of these work?" rather than asking more questions.
+9. ALWAYS call the recommend_products function when you identify matching products. This is MANDATORY.`;
 
 const SYSTEM_SCENARIO = `You are Jarvis, an expert mortgage product matching AI for a mortgage broker.
 Given a borrower scenario and a catalog of lender products, identify the TOP 3-5 products the borrower most likely qualifies for.
@@ -129,6 +124,27 @@ Rules:
 - Only reference product IDs that exist in the catalog.
 - Return ONLY the JSON. No backticks, no commentary.`;
 
+// Tool definition for structured product recommendations
+const RECOMMEND_PRODUCTS_TOOL = {
+  type: "function",
+  function: {
+    name: "recommend_products",
+    description: "Show matching loan products as cards in the UI. Call this EVERY TIME you identify products that match the borrower's needs. Pass all matching product IDs from the catalog.",
+    parameters: {
+      type: "object",
+      properties: {
+        product_ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of product IDs from the catalog that match the borrower's criteria",
+        },
+      },
+      required: ["product_ids"],
+      additionalProperties: false,
+    },
+  },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -143,6 +159,7 @@ serve(async (req) => {
     let system: string;
     let apiMessages: { role: string; content: string }[];
     let responseFormat: Record<string, unknown> | undefined;
+    let useTools = false;
 
     if (mode === "scenario") {
       system = SYSTEM_SCENARIO;
@@ -165,7 +182,9 @@ serve(async (req) => {
       ];
       responseFormat = { type: "json_object" };
     } else {
+      // Query / chat mode — use tool calling for product recommendations
       system = SYSTEM_QUERY;
+      useTools = true;
       const catalogContext = `\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
 
       if (chatMessages && Array.isArray(chatMessages) && chatMessages.length > 0) {
@@ -190,6 +209,9 @@ serve(async (req) => {
       messages: apiMessages,
     };
     if (responseFormat) requestBody.response_format = responseFormat;
+    if (useTools) {
+      requestBody.tools = [RECOMMEND_PRODUCTS_TOOL];
+    }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -222,7 +244,9 @@ serve(async (req) => {
     }
 
     const data = await resp.json();
-    const content = data?.choices?.[0]?.message?.content ?? "";
+    const choice = data?.choices?.[0];
+    const message = choice?.message;
+    const content = message?.content ?? "";
 
     if (mode === "extract") {
       const cleaned = content.replace(/^```json\s*|\s*```$/g, "").trim();
@@ -256,26 +280,58 @@ serve(async (req) => {
       }
     }
 
-    // For query mode, extract matched product IDs if present
+    // For query mode, extract matched product IDs from tool calls
     let matchedProductIds: string[] = [];
     let cleanContent = content;
-    // Try multiple regex patterns to catch the AI's output
-    const matchBlock = content.match(/```matched_products\s*\n?([\s\S]*?)\n?```/) ||
-                       content.match(/matched_products\s*\n?\[([^\]]*)\]/) ||
-                       content.match(/\["[a-f0-9-]+"(?:\s*,\s*"[a-f0-9-]+")*\]/);
-    if (matchBlock) {
-      try {
-        const raw = matchBlock[1] ?? matchBlock[0];
-        const trimmed = raw.trim();
-        const toParse = trimmed.startsWith("[") ? trimmed : `[${trimmed}]`;
-        matchedProductIds = JSON.parse(toParse);
-      } catch { /* ignore parse errors */ }
-      // Remove the matched_products block from displayed content
-      cleanContent = content
-        .replace(/```matched_products\s*\n?[\s\S]*?\n?```/g, "")
-        .replace(/matched_products\s*\n?\[[^\]]*\]/g, "")
-        .trim();
+
+    // Check for tool calls (structured output)
+    const toolCalls = message?.tool_calls;
+    if (toolCalls && Array.isArray(toolCalls)) {
+      for (const tc of toolCalls) {
+        if (tc.function?.name === "recommend_products") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            if (Array.isArray(args.product_ids)) {
+              matchedProductIds = args.product_ids;
+            }
+          } catch {
+            console.error("Failed to parse tool call args:", tc.function?.arguments);
+          }
+        }
+      }
     }
+
+    // Fallback: also check for text-based matched_products blocks
+    if (matchedProductIds.length === 0 && cleanContent) {
+      const matchBlock = cleanContent.match(/```matched_products\s*\n?([\s\S]*?)\n?```/) ||
+                         cleanContent.match(/matched_products\s*\n?\[([^\]]*)\]/);
+      if (matchBlock) {
+        try {
+          const raw = matchBlock[1].trim();
+          const toParse = raw.startsWith("[") ? raw : `[${raw}]`;
+          matchedProductIds = JSON.parse(toParse);
+        } catch { /* ignore */ }
+        cleanContent = cleanContent
+          .replace(/```matched_products\s*\n?[\s\S]*?\n?```/g, "")
+          .replace(/matched_products\s*\n?\[[^\]]*\]/g, "")
+          .trim();
+      }
+    }
+
+    // Second fallback: if AI mentioned product names but didn't call the tool,
+    // try to match product names from the catalog against the response text
+    if (matchedProductIds.length === 0 && catalog?.products && cleanContent) {
+      const prods = catalog.products as Array<{ id: string; productName: string }>;
+      for (const p of prods) {
+        if (p.productName && cleanContent.toLowerCase().includes(p.productName.toLowerCase())) {
+          matchedProductIds.push(p.id);
+        }
+      }
+      // Limit to top 5
+      matchedProductIds = matchedProductIds.slice(0, 5);
+    }
+
+    console.log("matchedProductIds:", matchedProductIds.length, matchedProductIds);
 
     return new Response(JSON.stringify({ content: cleanContent, matchedProductIds }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
