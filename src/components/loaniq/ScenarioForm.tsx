@@ -15,7 +15,7 @@ const DEFAULT: BorrowerScenario = {
   loanPurpose: "Purchase",
   propertyType: "SFR",
   occupancy: "Primary",
-  state: "CA",
+  state: "TX",
   propertyValue: 500000,
   loanAmount: 425000,
   downPaymentPct: 15,

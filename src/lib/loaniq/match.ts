@@ -129,7 +129,11 @@ export function scoreProduct(s: BorrowerScenario, p: LenderProduct): MatchResult
     return null;
   }
   // LTV
-  if (ltv > p.maxLtv + 0.01) return null;
+  const dpaCoversLtv = s.needsDPA && p.dpaAvailable;
+  if (!dpaCoversLtv && ltv > p.maxLtv + 0.01) return null;
+  if (dpaCoversLtv && ltv > p.maxLtv) {
+    caveats.push(`LTV ${ltv.toFixed(1)}% requires DPA to cover ${(ltv - p.maxLtv).toFixed(1)}% gap`);
+  }
   // DTI (skip if maxDti === 0 meaning N/A for DSCR etc.)
   if (p.maxDti > 0 && dti > p.maxDti + 0.5) return null;
   // Occupancy
