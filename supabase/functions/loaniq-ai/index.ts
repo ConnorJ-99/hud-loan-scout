@@ -7,20 +7,24 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_QUERY = `You are Jarvis, a conversational mortgage advisor. You chat like a senior loan officer texting a colleague — short, direct, helpful.
+const SYSTEM_QUERY = `You are Jarvis, a mortgage broker's internal assistant. You talk like a senior LO texting a colleague — short, punchy, no fluff.
+
+CONTEXT: The broker is licensed ONLY in Texas. Never ask which state. Always assume Texas.
 
 RULES:
-1. Keep EVERY response under 60 words. No exceptions.
-2. Ask 1-2 clarifying questions when you need info (FICO, state, occupancy, income type, veteran status, loan amount, DTI).
-3. NEVER list product names, FICO ranges, LTV, DTI, or any product details in your text. The UI renders product cards automatically.
-4. When you identify matching products, write ONLY a brief conversational note (e.g. "Found 2 FHA DPA options that fit. Want me to pull guidelines?") and append the product IDs block below.
-5. ALWAYS append matched product IDs when you mention ANY product — even one. No exceptions.
-6. If user says "Conventional" → only Conventional. "FHA" → only FHA. Never mix unless asked.
+1. Keep EVERY response under 50 words. Be direct.
+2. Ask at most ONE clarifying question per turn — only if truly needed (e.g. FICO, occupancy, income type, veteran status, loan amount). Skip questions you can infer.
+3. NEVER list product names, FICO ranges, LTV, DTI, or ANY product details in your text. The UI renders cards automatically.
+4. When you find matching products, say something brief like "Found 2 options that work." and append the product IDs block.
+5. ALWAYS append the matched_products block when you reference ANY product. No exceptions.
+6. If user says "FHA" → only FHA. "Conventional" → only Conventional. Never mix unless asked.
 7. Exclude rehab/renovation unless asked.
+8. Filter products for Texas (states array contains "TX" or "ALL").
+9. When in doubt, show products and ask "Any of these work?" rather than asking more questions.
 
-PRODUCT ID FORMAT (append at end, every time you reference products):
+PRODUCT ID FORMAT (append at end EVERY TIME):
 \`\`\`matched_products
-["exact-product-id-1", "exact-product-id-2"]
+["exact-product-id-1","exact-product-id-2"]
 \`\`\``;
 
 const SYSTEM_SCENARIO = `You are Jarvis, an expert mortgage product matching AI for a mortgage broker.
@@ -96,6 +100,35 @@ Rules:
 - Empty arrays not null for array fields.
 - Return ONLY the JSON object. No backticks, no commentary.`;
 
+const SYSTEM_NOTE = `You are LoanIQ's intelligence processor. The user writes a short observation or note about a lender (e.g. "UWM has the best pricing for FHA, VA, and conventional" or "Kind Lending is slow on appraisals").
+
+You are given the current lender catalog. Your job is to:
+1. Identify which lender(s) and loan program(s) the note applies to.
+2. Return a JSON object with updates to apply.
+
+Return STRICT JSON only:
+{
+  "lender_name": string,
+  "note_summary": string,
+  "tags_to_add": string[],
+  "programs_affected": [
+    {
+      "product_id": string,
+      "add_to_tags": string[],
+      "add_to_notes": string|null,
+      "add_to_competitive_advantages": string|null
+    }
+  ]
+}
+
+Rules:
+- Match lender name case-insensitively from the catalog.
+- For pricing notes, add tags like "best-pricing", "competitive-rates".
+- For speed notes, add tags like "fast-turn", "slow-turn".
+- For quality notes, add tags like "easy-uw", "strict-uw".
+- Only reference product IDs that exist in the catalog.
+- Return ONLY the JSON. No backticks, no commentary.`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -103,7 +136,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { mode, query, messages: chatMessages, scenario, catalog, rawText } = body;
+    const { mode, query, messages: chatMessages, scenario, catalog, rawText, noteText } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -122,6 +155,13 @@ serve(async (req) => {
       apiMessages = [
         { role: "system", content: system },
         { role: "user", content: `RAW GUIDELINE TEXT:\n${rawText}` },
+      ];
+      responseFormat = { type: "json_object" };
+    } else if (mode === "note") {
+      system = SYSTEM_NOTE;
+      apiMessages = [
+        { role: "system", content: system },
+        { role: "user", content: `NOTE: ${noteText}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}` },
       ];
       responseFormat = { type: "json_object" };
     } else {
@@ -200,15 +240,41 @@ serve(async (req) => {
       }
     }
 
+    if (mode === "note") {
+      const cleaned = content.replace(/^```json\s*|\s*```$/g, "").trim();
+      try {
+        const parsed = JSON.parse(cleaned);
+        return new Response(JSON.stringify({ noteResult: parsed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        console.error("note parse fail", e, cleaned.slice(0, 400));
+        return new Response(
+          JSON.stringify({ error: "Could not parse AI note processing." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // For query mode, extract matched product IDs if present
     let matchedProductIds: string[] = [];
     let cleanContent = content;
-    const matchBlock = content.match(/```matched_products\s*\n([\s\S]*?)\n```/);
+    // Try multiple regex patterns to catch the AI's output
+    const matchBlock = content.match(/```matched_products\s*\n?([\s\S]*?)\n?```/) ||
+                       content.match(/matched_products\s*\n?\[([^\]]*)\]/) ||
+                       content.match(/\["[a-f0-9-]+"(?:\s*,\s*"[a-f0-9-]+")*\]/);
     if (matchBlock) {
       try {
-        matchedProductIds = JSON.parse(matchBlock[1].trim());
+        const raw = matchBlock[1] ?? matchBlock[0];
+        const trimmed = raw.trim();
+        const toParse = trimmed.startsWith("[") ? trimmed : `[${trimmed}]`;
+        matchedProductIds = JSON.parse(toParse);
       } catch { /* ignore parse errors */ }
-      cleanContent = content.replace(/```matched_products\s*\n[\s\S]*?\n```/, "").trim();
+      // Remove the matched_products block from displayed content
+      cleanContent = content
+        .replace(/```matched_products\s*\n?[\s\S]*?\n?```/g, "")
+        .replace(/matched_products\s*\n?\[[^\]]*\]/g, "")
+        .trim();
     }
 
     return new Response(JSON.stringify({ content: cleanContent, matchedProductIds }), {

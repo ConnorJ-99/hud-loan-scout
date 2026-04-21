@@ -37,3 +37,27 @@ export async function analyzeScenario(
   if (data?.error) throw new Error(data.error);
   return (data?.content as string) ?? "";
 }
+
+export interface NoteResult {
+  lender_name: string;
+  note_summary: string;
+  tags_to_add: string[];
+  programs_affected: Array<{
+    product_id: string;
+    add_to_tags: string[];
+    add_to_notes: string | null;
+    add_to_competitive_advantages: string | null;
+  }>;
+}
+
+export async function processLenderNote(
+  noteText: string,
+  catalog: CatalogPayload,
+): Promise<NoteResult> {
+  const { data, error } = await supabase.functions.invoke("loaniq-ai", {
+    body: { mode: "note", noteText, catalog },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.noteResult as NoteResult;
+}
