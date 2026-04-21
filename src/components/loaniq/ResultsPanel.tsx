@@ -82,7 +82,7 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
     toast.success(shortlist.includes(id) ? "Removed from shortlist" : "Flagged to shortlist");
   };
 
-  if (!scenario && !scanning) {
+  if (!scenario && !scanning && matches.length === 0) {
     return (
       <div className="hud-panel rounded-md p-12 text-center">
         <div className="mx-auto h-32 w-32 relative mb-4">
