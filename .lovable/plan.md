@@ -1,41 +1,63 @@
 
 
-# Fix: Jarvis Empty Chat Bubbles + Products Not Populating ResultsPanel
+# Fix: Scan Returns 0 Matches + ResultsPanel Guard for Jarvis Products
 
-## Root Cause
+## Two Issues
 
-When the AI model uses **tool calling** (the `recommend_products` function), it returns product IDs in the tool call but sets `message.content` to `null` or empty string. The edge function returns this empty content to the frontend, which renders an empty chat bubble. The products also don't populate the ResultsPanel because the content-based fallback matching fails on empty text.
+### Issue 1: Scan shows "NO MATCHES" despite valid scenario
+The screenshot shows: purchase price $250,000, loan amount $250,000, down payment 0%, DPA toggled ON. This means LTV = 100%. But FHA products typically cap at 96.5% LTV. The hard filter `if (ltv > p.maxLtv + 0.01) return null` kills every product.
 
-## Plan
+When a borrower needs DPA and enters 0 down payment, they are saying "DPA will cover my down payment." The matching engine should relax the LTV check for DPA-eligible products: if the product has DPA available and the borrower needs DPA, treat the effective LTV as `maxLtv` (i.e., skip the LTV hard filter for that product) since DPA covers the gap.
 
-### Fix 1: Edge Function — Generate text content even when tool calls are used
+### Issue 2: ResultsPanel shows "AWAITING SCENARIO INPUT" when Jarvis populates matches
+Line 85: `if (!scenario && !scanning)` returns the placeholder even when `matches` has data from Jarvis. Already identified in prior plan.
 
-**File: `supabase/functions/loaniq-ai/index.ts`**
+## Changes
 
-When tool calls are present but `content` is empty, generate a short fallback message like `"Found {N} options that fit."` so the chat bubble always has visible text. Additionally, if `content` is null and there are no tool calls either, set a fallback like `"Let me look into that."`.
+### 1. Fix LTV hard filter for DPA scenarios
+**File: `src/lib/loaniq/match.ts`** (line 132)
 
-### Fix 2: Edge Function — Ensure tool call content is always populated
+Change the LTV check from:
+```
+if (ltv > p.maxLtv + 0.01) return null;
+```
+to:
+```
+// When borrower needs DPA and product offers DPA, skip LTV hard filter
+// (DPA covers the down payment gap, so effective first-mortgage LTV matches product max)
+const dpaCoversLtv = s.needsDPA && p.dpaAvailable;
+if (!dpaCoversLtv && ltv > p.maxLtv + 0.01) return null;
+```
 
-Update the AI request to include `tool_choice: "auto"` explicitly, and add a second follow-up system instruction telling the model to always include a brief conversational text reply alongside any tool call. Some models support returning both content and tool calls in the same response when instructed.
+Also add a caveat when DPA is bridging the LTV gap:
+```
+if (dpaCoversLtv && ltv > p.maxLtv) {
+  caveats.push(`LTV ${ltv.toFixed(1)}% requires DPA to cover ${(ltv - p.maxLtv).toFixed(1)}% gap`);
+}
+```
 
-### Fix 3: JarvisCommandBar — Handle empty assistant messages gracefully
+### 2. Fix default state to Texas
+**File: `src/components/loaniq/ScenarioForm.tsx`** (line 20)
 
-**File: `src/components/loaniq/JarvisCommandBar.tsx`**
+Change `state: "CA"` to `state: "TX"` in the DEFAULT object, since the broker is licensed only in Texas.
 
-If `result.content` is empty but `result.matchedProductIds` has items, set the assistant message content to a generated string like `"Found {N} matching programs."` so the bubble is never blank.
+### 3. Fix ResultsPanel guard for Jarvis-sourced matches
+**File: `src/components/loaniq/ResultsPanel.tsx`** (line 85)
 
-### Fix 4: Ensure `onMatchedProducts` callback reliably fires
-
-**File: `src/components/loaniq/JarvisCommandBar.tsx`**
-
-The `onMatchedProducts` callback is already called when `matchedProductIds.length > 0`. Verify this path works by adding a console.log. The parent `Index` component already has `handleJarvisMatchedProducts` wired up — this should work once content/IDs are correctly returned.
-
----
+Change:
+```
+if (!scenario && !scanning) {
+```
+to:
+```
+if (!scenario && !scanning && matches.length === 0) {
+```
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/loaniq-ai/index.ts` | Add fallback content when tool calls return empty content |
-| `src/components/loaniq/JarvisCommandBar.tsx` | Client-side fallback for empty content with matched products |
+| `src/lib/loaniq/match.ts` | Relax LTV hard filter when DPA covers down payment |
+| `src/components/loaniq/ScenarioForm.tsx` | Default state from CA to TX |
+| `src/components/loaniq/ResultsPanel.tsx` | Allow rendering when Jarvis provides matches without a scenario |
 
