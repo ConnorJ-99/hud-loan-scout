@@ -176,7 +176,7 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
                   <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     <div><span className="text-muted-foreground text-hud text-[9px] block">MIN FICO</span><span className="text-mono">{p.minFico}</span></div>
                     <div><span className="text-muted-foreground text-hud text-[9px] block">MAX LTV</span><span className="text-mono">{p.maxLtv}%</span></div>
-                    <div><span className="text-muted-foreground text-hud text-[9px] block">MAX DTI</span><span className="text-mono">{p.maxDti}%</span></div>
+                    <div><span className="text-muted-foreground text-hud text-[9px] block">MAX DTI</span><span className="text-mono">{p.maxDti > 0 ? `${p.maxDti}%` : "N/A"}</span></div>
                     <div><span className="text-muted-foreground text-hud text-[9px] block">LOAN TYPES</span><span className="text-mono text-[11px]">{p.loanTypes.join(", ")}</span></div>
                   </div>
 
@@ -251,7 +251,7 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
                 {Object.entries({
                   "Min FICO": drawerProduct.minFico,
                   "Max LTV": `${drawerProduct.maxLtv}%`,
-                  "Max DTI": `${drawerProduct.maxDti}%`,
+                  "Max DTI": drawerProduct.maxDti > 0 ? `${drawerProduct.maxDti}%` : "N/A",
                   "Loan Types": drawerProduct.loanTypes.join(", "),
                   "Income Types": drawerProduct.incomeTypesAllowed.join(", "),
                   "Property Types": drawerProduct.propertyTypesAllowed.join(", "),
