@@ -21,19 +21,19 @@ export function JarvisCommandBar({ lenders, products }: Props) {
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
 
   // Web Speech API setup
   useEffect(() => {
-    const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const SpeechRecognitionCtor = (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
 
-    const recognition = new (SpeechRecognition as new () => SpeechRecognition)();
+    const recognition = new (SpeechRecognitionCtor as { new(): { continuous: boolean; interimResults: boolean; lang: string; onresult: ((event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void } })();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = "en-US";
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event) => {
       const transcript = event.results[0]?.[0]?.transcript ?? "";
       if (transcript) {
         setQuery(transcript);

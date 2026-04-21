@@ -30,7 +30,7 @@ function incomeTypeMatches(borrowerType: IncomeType, productTypes: string[]): bo
         t === "dscr" || t === "no-doc" || t === "no doc" || t === "dscr/no-doc" || t === "no income"
       );
     case "Retired/Asset Depletion":
-      return normalized.some((t) =>
+      return normalized.some((t: string) =>
         t === "asset depletion" || t === "asset based" || t === "retired" || t === "retirement" ||
         t === "retired/asset depletion" || t === "full doc"
       );
