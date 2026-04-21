@@ -283,7 +283,7 @@ serve(async (req) => {
 
     // For query mode, extract matched product IDs from tool calls
     let matchedProductIds: string[] = [];
-    let cleanContent = content;
+    let cleanContent = content || "";
 
     // Check for tool calls (structured output)
     const toolCalls = message?.tool_calls;
@@ -333,6 +333,11 @@ serve(async (req) => {
     }
 
     console.log("matchedProductIds:", matchedProductIds.length, matchedProductIds);
+
+    // Fallback: if tool calls returned IDs but content is empty, generate a brief message
+    if (matchedProductIds.length > 0 && (!cleanContent || !cleanContent.trim())) {
+      cleanContent = `Found ${matchedProductIds.length} option${matchedProductIds.length > 1 ? 's' : ''} that fit. Check the cards.`;
+    }
 
     return new Response(JSON.stringify({ content: cleanContent, matchedProductIds }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
