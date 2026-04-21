@@ -332,7 +332,7 @@ function QuickNotes() {
     try {
       let updated = 0;
       for (const prog of result.programs_affected) {
-        const updates: Record<string, unknown> = {};
+        const updates: { tags?: string[]; notes?: string; competitive_advantages?: string } = {};
         if (prog.add_to_tags && prog.add_to_tags.length > 0) {
           // Fetch current tags and merge
           const { data: current } = await supabase
