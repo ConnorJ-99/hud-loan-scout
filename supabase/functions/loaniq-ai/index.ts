@@ -20,7 +20,8 @@ RULES:
 6. Exclude rehab/renovation unless asked.
 7. Filter products for Texas (states array contains "TX" or "ALL").
 8. When in doubt, show products and ask "Any of these work?" rather than asking more questions.
-9. ALWAYS call the recommend_products function when you identify matching products. This is MANDATORY.`;
+9. ALWAYS call the recommend_products function when you identify matching products. This is MANDATORY.
+10. IMPORTANT: When you call recommend_products, you MUST ALSO include a short text response (e.g. "Found 3 options that fit."). Never return an empty text response.`;
 
 const SYSTEM_SCENARIO = `You are Jarvis, an expert mortgage product matching AI for a mortgage broker.
 Given a borrower scenario and a catalog of lender products, identify the TOP 3-5 products the borrower most likely qualifies for.
@@ -211,6 +212,7 @@ serve(async (req) => {
     if (responseFormat) requestBody.response_format = responseFormat;
     if (useTools) {
       requestBody.tools = [RECOMMEND_PRODUCTS_TOOL];
+      requestBody.tool_choice = "auto";
     }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -282,7 +284,7 @@ serve(async (req) => {
 
     // For query mode, extract matched product IDs from tool calls
     let matchedProductIds: string[] = [];
-    let cleanContent = content;
+    let cleanContent = content || "";
 
     // Check for tool calls (structured output)
     const toolCalls = message?.tool_calls;
@@ -332,6 +334,11 @@ serve(async (req) => {
     }
 
     console.log("matchedProductIds:", matchedProductIds.length, matchedProductIds);
+
+    // Fallback: if tool calls returned IDs but content is empty, generate a brief message
+    if (matchedProductIds.length > 0 && (!cleanContent || !cleanContent.trim())) {
+      cleanContent = `Found ${matchedProductIds.length} option${matchedProductIds.length > 1 ? 's' : ''} that fit. Check the cards.`;
+    }
 
     return new Response(JSON.stringify({ content: cleanContent, matchedProductIds }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

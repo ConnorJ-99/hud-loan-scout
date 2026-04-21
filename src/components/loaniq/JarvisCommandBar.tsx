@@ -191,11 +191,19 @@ export function JarvisCommandBar({ lenders, products, onMatchedProducts }: Props
 
     try {
       const result = await askJarvis(newMessages, { lenders, products });
-      const assistantMsg: ChatMessage = { role: "assistant", content: result.content };
+      // Fallback content when AI used tool calling but returned no text
+      let content = result.content;
+      if ((!content || !content.trim()) && result.matchedProductIds.length > 0) {
+        content = `Found ${result.matchedProductIds.length} matching program${result.matchedProductIds.length > 1 ? 's' : ''}. Check the results panel.`;
+      } else if (!content || !content.trim()) {
+        content = "Let me look into that.";
+      }
+      const assistantMsg: ChatMessage = { role: "assistant", content };
       setMessages([...newMessages, assistantMsg]);
 
       // Surface matched products to parent for card display
       if (result.matchedProductIds.length > 0 && onMatchedProducts) {
+        console.log("[Jarvis] Firing onMatchedProducts with", result.matchedProductIds);
         onMatchedProducts(result.matchedProductIds);
       }
     } catch (e) {
