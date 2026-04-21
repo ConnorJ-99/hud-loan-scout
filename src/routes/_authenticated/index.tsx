@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { HudHeader } from "@/components/loaniq/HudHeader";
 import { JarvisCommandBar } from "@/components/loaniq/JarvisCommandBar";
 import { ScenarioForm } from "@/components/loaniq/ScenarioForm";
@@ -33,6 +33,7 @@ function Index() {
   const [aiLoading, setAiLoading] = useState(false);
   const [catalogLenders, setCatalogLenders] = useState<Lender[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<LenderProduct[]>([]);
+  const [jarvisSource, setJarvisSource] = useState(false); // true when results come from Jarvis chat
 
   useEffect(() => {
     loadCatalogFromDb().then(({ lenders, products }) => {
@@ -46,6 +47,7 @@ function Index() {
     setScenario(s);
     setMatches([]);
     setAiAnalysis("");
+    setJarvisSource(false);
     await new Promise((r) => setTimeout(r, 700));
 
     const { lenders, products } = await loadCatalogFromDb();
@@ -88,6 +90,7 @@ function Index() {
     setAiAnalysis("");
     setAiLoading(false);
     setInitialScenario(undefined);
+    setJarvisSource(false);
   };
 
   const loadHistoric = (id: string) => {
@@ -98,11 +101,46 @@ function Index() {
     }
   };
 
+  // When Jarvis chat recommends products, show them in the results panel
+  const handleJarvisMatchedProducts = useCallback((productIds: string[]) => {
+    if (productIds.length === 0) {
+      // Clear Jarvis results
+      if (jarvisSource) {
+        setMatches([]);
+        setJarvisSource(false);
+      }
+      return;
+    }
+
+    const results: MatchResult[] = [];
+    productIds.forEach((id, idx) => {
+      const product = catalogProducts.find((p) => p.id === id);
+      if (!product) return;
+      results.push({
+        productId: id,
+        matchScore: 100 - idx * 5,
+        status: (idx === 0 ? "STRONG MATCH" : idx < 3 ? "POSSIBLE MATCH" : "CONDITIONAL MATCH") as MatchResult["status"],
+        highlights: [`Recommended by Jarvis`, `Min FICO ${product.minFico}`, `Max LTV ${product.maxLtv}%`],
+        caveats: [] as string[],
+      });
+    });
+
+    setMatches(results);
+    setScenario(null);
+    setJarvisSource(true);
+    setAiAnalysis("");
+    setAiLoading(false);
+  }, [catalogProducts, jarvisSource]);
+
   return (
     <div className="min-h-screen relative">
       <HudHeader onLoadScenario={loadHistoric} />
       <main className="relative z-10 mx-auto max-w-[1800px] px-6 py-6 space-y-5">
-        <JarvisCommandBar lenders={catalogLenders} products={catalogProducts} />
+        <JarvisCommandBar
+          lenders={catalogLenders}
+          products={catalogProducts}
+          onMatchedProducts={handleJarvisMatchedProducts}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-5">
           <aside className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto pb-2">
