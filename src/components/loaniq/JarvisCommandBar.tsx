@@ -60,19 +60,24 @@ export function JarvisCommandBar({ lenders, products, onMatchedProducts }: Props
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
+    let lastFinalIdx = 0; // track which results we've already committed
+
     recognition.onresult = (event) => {
-      let final = "";
+      let newFinal = "";
       let interim = "";
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          final += result[0].transcript + " ";
+          if (i >= lastFinalIdx) {
+            newFinal += result[0].transcript + " ";
+            lastFinalIdx = i + 1;
+          }
         } else {
           interim += result[0].transcript;
         }
       }
-      if (final.trim()) {
-        setQuery((prev) => (prev ? prev + " " : "") + final.trim());
+      if (newFinal.trim()) {
+        setQuery((prev) => (prev ? prev + " " : "") + newFinal.trim());
       }
       setInterimText(interim);
     };
