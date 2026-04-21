@@ -112,23 +112,21 @@ function Index() {
       return;
     }
 
-    // Build match results from the product IDs
-    const results: MatchResult[] = productIds
-      .map((id, idx) => {
-        const product = catalogProducts.find((p) => p.id === id);
-        if (!product) return null;
-        return {
-          productId: id,
-          matchScore: 100 - idx * 5, // rank by order AI returned them
-          status: (idx === 0 ? "STRONG MATCH" : idx < 3 ? "POSSIBLE MATCH" : "CONDITIONAL MATCH") as MatchResult["status"],
-          highlights: [`Recommended by Jarvis`, `Min FICO ${product.minFico}`, `Max LTV ${product.maxLtv}%`],
-          caveats: [],
-        };
-      })
-      .filter((m): m is MatchResult => m !== null);
+    const results: MatchResult[] = [];
+    productIds.forEach((id, idx) => {
+      const product = catalogProducts.find((p) => p.id === id);
+      if (!product) return;
+      results.push({
+        productId: id,
+        matchScore: 100 - idx * 5,
+        status: (idx === 0 ? "STRONG MATCH" : idx < 3 ? "POSSIBLE MATCH" : "CONDITIONAL MATCH") as MatchResult["status"],
+        highlights: [`Recommended by Jarvis`, `Min FICO ${product.minFico}`, `Max LTV ${product.maxLtv}%`],
+        caveats: [] as string[],
+      });
+    });
 
     setMatches(results);
-    setScenario(null); // clear scenario — these are Jarvis-sourced
+    setScenario(null);
     setJarvisSource(true);
     setAiAnalysis("");
     setAiLoading(false);
