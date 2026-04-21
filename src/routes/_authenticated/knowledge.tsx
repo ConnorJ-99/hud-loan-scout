@@ -292,7 +292,211 @@ function PasteAndLearn() {
   );
 }
 
-// ============ MANUAL BUILDER ============
+// ============ QUICK NOTES ============
+function QuickNotes() {
+  const [noteText, setNoteText] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<NoteResult | null>(null);
+  const [applying, setApplying] = useState(false);
+
+  const EXAMPLES = [
+    "UWM has the best pricing for FHA, VA, and conventional",
+    "Kind Lending is slow on appraisals, usually 10+ days",
+    "Equity Prime is great for low FICO VA loans",
+    "Click n' Close has aggressive DPA programs for first-time buyers",
+  ];
+
+  async function analyze() {
+    if (noteText.trim().length < 5) {
+      toast.error("Write at least a short note");
+      return;
+    }
+    setProcessing(true);
+    setResult(null);
+    try {
+      const { lenders, products } = await loadCatalogFromDb();
+      const catalog = { lenders, products };
+      const res = await processLenderNote(noteText, catalog);
+      setResult(res);
+      toast.success(`Identified ${res.programs_affected.length} program(s) to update for ${res.lender_name}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Processing failed");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function applyUpdates() {
+    if (!result) return;
+    setApplying(true);
+    try {
+      let updated = 0;
+      for (const prog of result.programs_affected) {
+        const updates: Record<string, unknown> = {};
+        if (prog.add_to_tags && prog.add_to_tags.length > 0) {
+          // Fetch current tags and merge
+          const { data: current } = await supabase
+            .from("loan_programs")
+            .select("tags, notes, competitive_advantages")
+            .eq("id", prog.product_id)
+            .single();
+          if (current) {
+            const existingTags = (current.tags as string[]) || [];
+            const newTags = [...new Set([...existingTags, ...prog.add_to_tags])];
+            updates.tags = newTags;
+          }
+        }
+        if (prog.add_to_notes) {
+          const { data: current } = await supabase
+            .from("loan_programs")
+            .select("notes")
+            .eq("id", prog.product_id)
+            .single();
+          const existing = (current?.notes as string) || "";
+          updates.notes = existing ? `${existing}\n${prog.add_to_notes}` : prog.add_to_notes;
+        }
+        if (prog.add_to_competitive_advantages) {
+          const { data: current } = await supabase
+            .from("loan_programs")
+            .select("competitive_advantages")
+            .eq("id", prog.product_id)
+            .single();
+          const existing = (current?.competitive_advantages as string) || "";
+          updates.competitive_advantages = existing
+            ? `${existing}; ${prog.add_to_competitive_advantages}`
+            : prog.add_to_competitive_advantages;
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("loan_programs").update(updates).eq("id", prog.product_id);
+          updated++;
+        }
+      }
+
+      // Also save the note to ae_notes if we can find the lender
+      const { data: lenderMatch } = await supabase
+        .from("lenders")
+        .select("id")
+        .ilike("name", `%${result.lender_name}%`)
+        .maybeSingle();
+      if (lenderMatch) {
+        await supabase.from("ae_notes").insert({
+          lender_id: lenderMatch.id,
+          note: noteText,
+          category: "intel",
+        });
+      }
+
+      toast.success(`Updated ${updated} program(s) and saved note`);
+      setNoteText("");
+      setResult(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to apply");
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card className="p-6 hud-corners bg-panel/80">
+        <h3 className="font-hud tracking-wider text-cyan mb-3">QUICK INTEL NOTE</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Type a quick observation about a lender — pricing, speed, quality, quirks. Jarvis will tag the relevant products automatically.
+        </p>
+        <Textarea
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder="e.g. UWM has the best pricing for FHA, VA, and conventional..."
+          className="min-h-[150px] font-mono text-xs"
+          maxLength={2000}
+        />
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground font-mono">
+            {noteText.length} / 2,000
+          </span>
+          <Button onClick={analyze} disabled={processing} className="font-hud tracking-widest">
+            {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> PROCESSING</> : <><Brain className="h-4 w-4 mr-2" /> PROCESS NOTE</>}
+          </Button>
+        </div>
+        <div className="mt-4">
+          <p className="text-[10px] text-muted-foreground font-hud tracking-wider mb-2">EXAMPLES:</p>
+          <div className="flex flex-wrap gap-2">
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                onClick={() => setNoteText(ex)}
+                className="rounded-sm border border-border bg-panel/40 px-2.5 py-1 text-[10px] text-mono text-muted-foreground hover:border-cyan/60 hover:text-cyan transition"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 hud-corners bg-panel/80">
+        <h3 className="font-hud tracking-wider text-cyan mb-3">AI ANALYSIS</h3>
+        {!result && !processing && (
+          <div className="flex items-center justify-center h-[250px] border border-dashed border-border rounded">
+            <p className="text-xs text-muted-foreground font-hud tracking-wider">TYPE A NOTE TO GET STARTED...</p>
+          </div>
+        )}
+        {processing && (
+          <div className="flex flex-col items-center justify-center h-[250px] gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-cyan" />
+            <p className="text-xs text-muted-foreground font-hud tracking-wider">JARVIS ANALYZING NOTE...</p>
+          </div>
+        )}
+        {result && (
+          <div className="space-y-4">
+            <div>
+              <Badge className="bg-cyan text-background mb-2">LENDER: {result.lender_name}</Badge>
+              <p className="text-xs text-muted-foreground">{result.note_summary}</p>
+            </div>
+            {result.tags_to_add.length > 0 && (
+              <div>
+                <p className="text-[10px] text-muted-foreground font-hud mb-1">TAGS TO ADD:</p>
+                <div className="flex flex-wrap gap-1">
+                  {result.tags_to_add.map((t) => (
+                    <Badge key={t} variant="outline" className="text-[9px] text-cyan border-cyan/50">{t}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <p className="text-[10px] text-muted-foreground font-hud mb-1">PROGRAMS TO UPDATE ({result.programs_affected.length}):</p>
+              <div className="space-y-2">
+                {result.programs_affected.map((p) => (
+                  <div key={p.product_id} className="border border-border rounded p-2 bg-background/40 text-xs">
+                    <span className="font-mono text-[10px] text-muted-foreground">{p.product_id.slice(0, 8)}...</span>
+                    {p.add_to_tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {p.add_to_tags.map((t) => (
+                          <Badge key={t} variant="outline" className="text-[9px]">+{t}</Badge>
+                        ))}
+                      </div>
+                    )}
+                    {p.add_to_competitive_advantages && (
+                      <p className="text-[10px] text-cyan/70 italic mt-1">★ {p.add_to_competitive_advantages}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Button
+              onClick={applyUpdates}
+              disabled={applying}
+              className="w-full font-hud tracking-widest bg-cyan text-background hover:bg-cyan/90"
+            >
+              {applying ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> APPLYING</> : <>APPLY UPDATES →</>}
+            </Button>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 function ManualBuilder() {
   const [lenders, setLenders] = useState<DbLender[]>([]);
   const [programs, setPrograms] = useState<DbProgram[]>([]);
