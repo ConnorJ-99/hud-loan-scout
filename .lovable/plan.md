@@ -1,115 +1,116 @@
 
 
-# LoanIQ Overhaul Plan
+# LoanIQ Fixes: DTI, Filtering, Voice, and Conversational Jarvis
 
-This is a significant rework addressing multiple broken features and UX issues. The reference image shows the target UI vision.
+## Issues Found
 
-## Issues Identified
+1. **DTI shows 0% for all Agency products**: Most FHA, VA, Conventional, USDA products have `max_dti = NULL` in the database. The code converts NULL to 0 (`Number(p.max_dti ?? 0)`), which displays as "0%" in the UI. Standard industry DTI limits should be used as defaults when NULL (e.g., 50% for Conventional, 56.9% for FHA, no limit for VA).
 
-1. **Sign-in doesn't gate access** — The entire app is visible without authentication. Sign-in should be required before accessing any page.
-2. **Jarvis command bar reads from empty localStorage** — `JarvisCommandBar` calls `store.getLenders()` / `store.getProducts()` which reads from localStorage (always empty after the cleanup), instead of fetching from the database.
-3. **Scenario form input bug** — Likely a re-render issue causing scroll-to-top on each keystroke.
-4. **Match results show "NO MATCHES" despite AI finding matches** — The rule-based `rankMatches` engine filters don't align with the DB product schema (e.g., income type "W2" vs DB storing "Full Doc").
-5. **No reset button** on the scenario form.
-6. **Product details are too brief** — Clicking a product should open a detailed expanded view with full qualification matrix.
-7. **No paste-to-import** — User wants to paste raw guideline text in the catalog to auto-extract and add lenders/products (the Knowledge page already has this, but it's buried and admin-only).
-8. **No voice input** for Jarvis command bar.
+2. **Wrong loan programs appearing**: The `loan_types` stored in the DB include values like `"Full Doc"`, `"Conventional"`, `"FHA"`, `"Bank Statement"` — but the UI filter uses `"Hard Money"`, `"Bridge"`, `"Non-QM"` which don't exist in the DB. When a user selects "Conventional" in the filter, rehab loans (FHA 203k, Choice Renovation) still show because they also contain "Conventional" or "Full Doc" in their `loan_types` array. No filtering by `product_type` (Agency vs Non-QM) is done. Additionally, the match engine doesn't filter by the borrower's `loanTypePrefs` as a hard filter — it only applies a small 15-point penalty.
+
+3. **Voice cuts off**: `SpeechRecognition` is set to `continuous = false` and `interimResults = false`, so it stops after the first sentence. No audio level visualization exists.
+
+4. **Jarvis response is a wall of text**: The command bar shows raw markdown. User wants card-style results like the scenario search, with ability to continue conversation.
 
 ---
 
 ## Plan
 
-### Phase 1: Authentication Gate (Critical)
+### Fix 1: DTI Default Values
 
-**Require sign-in to access the app.**
+**File: `src/lib/loaniq/dbCatalog.ts`**
 
-- Create a pathless layout route `src/routes/_authenticated.tsx` with `beforeLoad` that checks Supabase session and redirects to `/auth` if not signed in.
-- Move `index.tsx`, `catalog.tsx`, and `knowledge.tsx` under `_authenticated/` prefix so they become `src/routes/_authenticated/index.tsx`, `src/routes/_authenticated/catalog.tsx`, `src/routes/_authenticated/knowledge.tsx`.
-- Update the `/auth` page to redirect to `/` after successful sign-in (already does this).
-- Remove the "Back to scanner" link on the auth page since unauthenticated users shouldn't bypass login.
-- Pass auth context (user, isAdmin) through router context so all child routes can access it.
-- Verify the admin account sign-in works by testing the auth flow.
+When `max_dti` is NULL, apply standard industry defaults based on loan type:
+- FHA: 56.9%
+- VA: 60% (effectively unlimited with AUS)
+- Conventional: 50%
+- USDA: 41%
+- Non-QM/DSCR: 0 (meaning "not applicable" — DSCR uses debt service coverage ratio instead)
 
-### Phase 2: Fix Jarvis Command Bar (Critical)
+Update the mapping logic to check `loan_types` and set a sensible default. Display "N/A" in the UI when DTI truly doesn't apply (DSCR products).
 
-**Make Jarvis read from the database, not empty localStorage.**
+**File: `src/components/loaniq/ResultsPanel.tsx`**
 
-- Update `JarvisCommandBar` to accept `lenders` and `products` as props from the parent (which already fetches from DB), OR have it call `loadCatalogFromDb()` directly.
-- Remove the `store.getLenders()` / `store.getProducts()` calls from the command bar.
-- This is why Jarvis says "catalog is empty" — it's reading from localStorage which was intentionally cleared.
+Show "N/A" instead of "0%" when `maxDti === 0` (indicating DTI is not applicable for that product type).
 
-### Phase 3: Fix Scenario Form & Results
+### Fix 2: Loan Program Filtering
 
-- **Input scroll bug**: The form likely re-renders the parent on each keystroke causing scroll reset. Will investigate and fix the state update pattern (likely the `set` helper triggering unnecessary re-renders).
-- **Add Reset button**: Add a "RESET" button next to the "SCAN FOR MATCHES" button that resets all fields to defaults.
-- **Fix match engine alignment**: The `rankMatches` engine checks for income types like "W2" but the DB stores "Full Doc". Need to add mapping logic so "W2" matches "Full Doc", "Bank Statement" matches "Bank Statement", etc.
+**File: `src/lib/loaniq/match.ts`**
 
-### Phase 4: Enhanced Product Detail View
+- Make `loanTypePrefs` a **hard filter** (not just a score penalty). If the borrower selects "Conventional", exclude FHA, VA, DSCR, etc. If "Hard Money" is selected, only show products with "Hard Money" in loan_types.
+- Add `product_type` awareness: map borrower loan type preferences to product types. "Conventional" maps to Agency products with "Conventional" in loan_types. "Non-QM" maps to Non-QM product_type. "Hard Money" should only match products explicitly tagged as Hard Money.
+- Exclude renovation/rehab products (203k, Choice Renovation) from standard purchase searches unless the borrower specifically indicates a rehab scenario. Add a check: if product name contains "203(k)" or "Renovation" or "Rehab" and borrower hasn't selected a rehab-related special need, skip it.
 
-**When clicking a product in the catalog or results, show an expanded detail panel.**
+**File: `src/lib/loaniq/types.ts`**
 
-Inspired by the reference image's "PROGRAM DETAILS" sidebar:
-- Product name, match score, best match indicator
-- Full qualification matrix: LTV, credit score range, DTI ratio, min down payment, MIP details, occupancy, loan purpose
-- Product guidelines description (full notes, not abbreviated)
-- "VIEW FULL GUIDELINES" button
-- Available lenders list with their rates
-- Implement as a slide-out `Sheet` or a dedicated detail panel on the right side
+Add `productType` field to `LenderProduct` interface to carry the `product_type` from DB.
 
-### Phase 5: Paste-to-Import in Catalog
+**File: `src/lib/loaniq/dbCatalog.ts`**
 
-**Add a "Paste Guidelines" option alongside CSV import and Add Lender.**
+Map `product_type` from DB to the new `productType` field.
 
-- Add a textarea modal in the catalog page where users can paste raw lender guideline text.
-- Wire it to the existing `extractGuidelines` + `commitExtraction` flow from `src/lib/loaniq/knowledge.ts`.
-- After extraction, show a preview of what was parsed, then commit to DB on confirmation.
-- This reuses the existing AI extraction edge function (`loaniq-ai` with mode "extract").
+### Fix 3: Voice Recording with Audio Levels
 
-### Phase 6: Voice Input for Jarvis
+**File: `src/components/loaniq/JarvisCommandBar.tsx`**
 
-**Add a microphone button to the Jarvis command bar for voice queries.**
+- Set `recognition.continuous = true` and `recognition.interimResults = true` so it keeps listening and shows partial transcription.
+- Use `AudioContext` + `AnalyserNode` via `navigator.mediaDevices.getUserMedia()` to get real-time decibel levels while recording.
+- Show a visual audio level indicator (animated bar or waveform) next to the mic button while listening.
+- Display interim transcript in the input field in real-time (with lighter styling for unfinalized text).
+- Add a manual "stop" action (click mic again or press Enter) to finalize.
 
-- Use the Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`) — no external dependencies needed.
-- Add a microphone icon button next to the text input.
-- When clicked, start listening; transcribed text fills the input field.
-- Works on mobile browsers (Chrome, Safari) for phone usage.
-- Add a visual indicator (pulsing mic icon) while recording.
+### Fix 4: Conversational Jarvis with Card Results
 
-### Phase 7: AI Response Length
+**File: `src/components/loaniq/JarvisCommandBar.tsx`**
 
-**The AI scenario analysis is excessively long.** 
+Major rework to support multi-turn conversation:
 
-- Update the system prompt in the edge function to produce concise, actionable summaries (top 3-5 matches with brief rationale) instead of exhaustive analysis of every possible product.
-- Cap response at a reasonable length.
+- Replace single `response` string with a `messages` array (chat history).
+- Send full conversation history to the AI on each turn so it has context.
+- The AI can ask follow-up questions ("What's the borrower's FICO?" / "Is this for investment or primary?").
+- User responds, AI narrows down, continues until a product is found.
+
+**File: `src/lib/loaniq/ai.ts`**
+
+- Update `askJarvis` to accept and send conversation history (array of `{role, content}` messages) instead of a single query string.
+- Return structured data when possible so the UI can render product cards.
+
+**File: `supabase/functions/loaniq-ai/index.ts`**
+
+- Update `SYSTEM_QUERY` prompt to instruct the AI to:
+  - Be conversational — ask clarifying questions about FICO, DTI, property type, loan purpose, etc.
+  - Filter results strictly — if user says "Conventional", exclude FHA/VA/DSCR/Hard Money.
+  - If user says "Hard Money", exclude FHA/Conventional.
+  - Return concise, structured results (not walls of text).
+  - When enough info is gathered, return a short list of matching products in a structured format.
+- Accept `messages` array (multi-turn) instead of single `query` string.
+- Keep responses under 300 words for conversational turns.
+
+**File: `src/components/loaniq/JarvisCommandBar.tsx` (UI)**
+
+- Render AI responses that contain product matches as styled cards (similar to ResultsPanel match cards) rather than raw markdown.
+- Show conversation thread with user messages and AI responses.
+- Keep the input bar at the bottom for continued conversation.
+- Add a "New Conversation" button to clear history.
 
 ---
 
 ## Files to Create/Modify
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/routes/_authenticated.tsx` | Create — auth layout guard |
-| `src/routes/_authenticated/index.tsx` | Move from `src/routes/index.tsx` |
-| `src/routes/_authenticated/catalog.tsx` | Move from `src/routes/catalog.tsx` |
-| `src/routes/_authenticated/knowledge.tsx` | Move from `src/routes/knowledge.tsx` |
-| `src/routes/auth.tsx` | Update — remove "back to scanner" link |
-| `src/routes/__root.tsx` | Update — add auth context to router |
-| `src/router.tsx` | Update — pass auth context |
-| `src/components/loaniq/JarvisCommandBar.tsx` | Fix — read catalog from DB/props, add voice input |
-| `src/components/loaniq/ScenarioForm.tsx` | Fix — input scroll bug, add reset button |
-| `src/components/loaniq/ResultsPanel.tsx` | Update — enhanced product detail view |
-| `src/components/loaniq/ProductDetailPanel.tsx` | Create — expanded product matrix view |
-| `src/lib/loaniq/match.ts` | Fix — income type mapping for DB data |
-| `src/lib/loaniq/storage.ts` | Clean up — remove seed imports |
-| `supabase/functions/loaniq-ai/index.ts` | Update — shorter AI responses |
+| `src/lib/loaniq/dbCatalog.ts` | DTI defaults based on loan type, add productType mapping |
+| `src/lib/loaniq/types.ts` | Add `productType` to `LenderProduct` |
+| `src/lib/loaniq/match.ts` | Hard filter on loanTypePrefs, exclude rehab products, product_type awareness |
+| `src/components/loaniq/ResultsPanel.tsx` | Show "N/A" for 0% DTI |
+| `src/components/loaniq/JarvisCommandBar.tsx` | Continuous voice with audio levels, multi-turn conversation, card-style results |
+| `src/lib/loaniq/ai.ts` | Multi-turn message support |
+| `supabase/functions/loaniq-ai/index.ts` | Conversational prompt, strict filtering instructions, accept messages array |
 
-## Priority Order
+## Priority
 
-1. Auth gate (Phase 1) — blocks everything, security critical
-2. Fix Jarvis catalog reading (Phase 2) — core functionality broken
-3. Fix scenario form + results (Phase 3) — core functionality broken
-4. Product detail view (Phase 4) — key UX improvement
-5. Paste-to-import (Phase 5) — workflow improvement
-6. Voice input (Phase 6) — mobile UX
-7. AI response tuning (Phase 7) — quality improvement
+1. DTI defaults (quick data fix)
+2. Loan type filtering (core matching accuracy)
+3. Voice recording (UX)
+4. Conversational Jarvis (feature rework)
 
