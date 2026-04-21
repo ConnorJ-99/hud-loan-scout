@@ -15,9 +15,10 @@ const SAMPLE_QUERIES = [
 interface Props {
   lenders: Lender[];
   products: LenderProduct[];
+  onMatchedProducts?: (productIds: string[]) => void;
 }
 
-export function JarvisCommandBar({ lenders, products }: Props) {
+export function JarvisCommandBar({ lenders, products, onMatchedProducts }: Props) {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,11 +32,17 @@ export function JarvisCommandBar({ lenders, products }: Props) {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const listeningRef = useRef(false); // track listening state for onend restart
 
   // Scroll to bottom on new messages
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Keep listeningRef in sync
+  useEffect(() => {
+    listeningRef.current = listening;
+  }, [listening]);
 
   // Speech recognition setup
   useEffect(() => {
@@ -72,15 +79,27 @@ export function JarvisCommandBar({ lenders, products }: Props) {
 
     recognition.onerror = (event) => {
       console.error("Speech error:", event.error);
-      if (event.error !== "aborted") {
+      if (event.error !== "aborted" && event.error !== "no-speech") {
         setListening(false);
+        listeningRef.current = false;
         stopAudioMonitor();
       }
     };
+
+    // AUTO-RESTART: Browser may stop recognition after silence.
+    // If we're still in "listening" mode, restart it automatically.
     recognition.onend = () => {
-      setListening(false);
-      setInterimText("");
-      stopAudioMonitor();
+      if (listeningRef.current) {
+        // Browser stopped due to silence — restart
+        try {
+          recognition.start();
+        } catch {
+          // Already started or other error — ignore
+        }
+      } else {
+        setInterimText("");
+        stopAudioMonitor();
+      }
     };
 
     recognitionRef.current = recognition;
@@ -132,14 +151,16 @@ export function JarvisCommandBar({ lenders, products }: Props) {
       return;
     }
     if (listening) {
-      recognitionRef.current.stop();
+      listeningRef.current = false;
       setListening(false);
+      recognitionRef.current.stop();
       setInterimText("");
       stopAudioMonitor();
     } else {
       setInterimText("");
-      recognitionRef.current.start();
+      listeningRef.current = true;
       setListening(true);
+      recognitionRef.current.start();
       startAudioMonitor();
     }
   }, [listening, startAudioMonitor, stopAudioMonitor]);
@@ -150,8 +171,9 @@ export function JarvisCommandBar({ lenders, products }: Props) {
 
     // Stop mic if listening
     if (listening && recognitionRef.current) {
-      recognitionRef.current.stop();
+      listeningRef.current = false;
       setListening(false);
+      recognitionRef.current.stop();
       setInterimText("");
       stopAudioMonitor();
     }
@@ -163,9 +185,14 @@ export function JarvisCommandBar({ lenders, products }: Props) {
     setLoading(true);
 
     try {
-      const out = await askJarvis(newMessages, { lenders, products });
-      const assistantMsg: ChatMessage = { role: "assistant", content: out };
+      const result = await askJarvis(newMessages, { lenders, products });
+      const assistantMsg: ChatMessage = { role: "assistant", content: result.content };
       setMessages([...newMessages, assistantMsg]);
+
+      // Surface matched products to parent for card display
+      if (result.matchedProductIds.length > 0 && onMatchedProducts) {
+        onMatchedProducts(result.matchedProductIds);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "AI request failed";
       toast.error(msg);
@@ -180,6 +207,7 @@ export function JarvisCommandBar({ lenders, products }: Props) {
     setMessages([]);
     setQuery("");
     setInterimText("");
+    onMatchedProducts?.([]);
   };
 
   const displayedQuery = interimText ? (query + " " + interimText).trim() : query;

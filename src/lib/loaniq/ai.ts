@@ -6,16 +6,24 @@ interface CatalogPayload {
   products: LenderProduct[];
 }
 
+export interface JarvisResponse {
+  content: string;
+  matchedProductIds: string[];
+}
+
 export async function askJarvis(
   messages: ChatMessage[],
   catalog: CatalogPayload,
-): Promise<string> {
+): Promise<JarvisResponse> {
   const { data, error } = await supabase.functions.invoke("loaniq-ai", {
     body: { mode: "query", messages, catalog },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
-  return (data?.content as string) ?? "";
+  return {
+    content: (data?.content as string) ?? "",
+    matchedProductIds: (data?.matchedProductIds as string[]) ?? [],
+  };
 }
 
 export async function analyzeScenario(

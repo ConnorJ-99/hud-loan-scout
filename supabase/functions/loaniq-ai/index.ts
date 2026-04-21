@@ -15,16 +15,17 @@ RULES:
 2. When you have enough info, recommend 2-4 matching products. Keep it SHORT — 2-3 bullet points per product max.
 3. STRICT FILTERING: If the user says "Conventional", ONLY show Conventional products. If they say "Hard Money", ONLY show Hard Money. Never mix product types.
 4. Exclude renovation/rehab programs (203k, Choice Renovation) unless the user specifically asks for rehab/renovation.
-5. Keep each response under 250 words. No walls of text.
+5. Keep each response under 200 words. No walls of text.
 6. Reference actual guideline fields: min FICO, max LTV, max DTI, DPA, etc.
 7. Tone: confident, concise, like a senior loan officer. Not an essay writer.
 8. You can continue the conversation — the broker can ask follow-up questions to narrow down further.
-9. When recommending products, format as:
-   **[Lender Name] — [Product Name]**
-   • Key qualifying detail
-   • Key qualifying detail
 
-Do NOT use long sections like "Caveats", "Suggested Next Steps" etc. Keep it punchy.`;
+CRITICAL — PRODUCT REFERENCES:
+When you recommend products, you MUST include a JSON block at the END of your response (after your conversational text) with the exact product IDs from the catalog that you're recommending. Format:
+\`\`\`matched_products
+["product-id-1", "product-id-2", "product-id-3"]
+\`\`\`
+Use the exact "id" field values from the catalog JSON. Only include this block when you are actually recommending specific products. Do NOT include it when just asking clarifying questions.`;
 
 const SYSTEM_SCENARIO = `You are Jarvis, an expert mortgage product matching AI for a mortgage broker.
 Given a borrower scenario and a catalog of lender products, identify the TOP 3-5 products the borrower most likely qualifies for.
@@ -128,13 +129,10 @@ serve(async (req) => {
       ];
       responseFormat = { type: "json_object" };
     } else {
-      // query mode — supports multi-turn conversation
       system = SYSTEM_QUERY;
       const catalogContext = `\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
 
       if (chatMessages && Array.isArray(chatMessages) && chatMessages.length > 0) {
-        // Multi-turn: prepend system, then all user/assistant messages
-        // Inject catalog context into the first user message
         apiMessages = [{ role: "system", content: system }];
         chatMessages.forEach((msg: { role: string; content: string }, idx: number) => {
           if (idx === 0 && msg.role === "user") {
@@ -144,7 +142,6 @@ serve(async (req) => {
           }
         });
       } else {
-        // Legacy single query fallback
         apiMessages = [
           { role: "system", content: system },
           { role: "user", content: `QUESTION: ${query}${catalogContext}` },
@@ -153,7 +150,7 @@ serve(async (req) => {
     }
 
     const requestBody: Record<string, unknown> = {
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: apiMessages,
     };
     if (responseFormat) requestBody.response_format = responseFormat;
@@ -207,7 +204,18 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ content }), {
+    // For query mode, extract matched product IDs if present
+    let matchedProductIds: string[] = [];
+    let cleanContent = content;
+    const matchBlock = content.match(/```matched_products\s*\n([\s\S]*?)\n```/);
+    if (matchBlock) {
+      try {
+        matchedProductIds = JSON.parse(matchBlock[1].trim());
+      } catch { /* ignore parse errors */ }
+      cleanContent = content.replace(/```matched_products\s*\n[\s\S]*?\n```/, "").trim();
+    }
+
+    return new Response(JSON.stringify({ content: cleanContent, matchedProductIds }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
