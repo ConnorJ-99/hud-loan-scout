@@ -11,8 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Loader2, Brain, Database, FileText, Plus, Trash2, Pencil, X } from "lucide-react";
+import { Loader2, Brain, Database, FileText, Plus, Trash2, Pencil, X, MessageSquarePlus } from "lucide-react";
 import { extractGuidelines, commitExtraction, type ExtractionResult } from "@/lib/loaniq/knowledge";
+import { processLenderNote, type NoteResult } from "@/lib/loaniq/ai";
+import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import { HudHeader } from "@/components/loaniq/HudHeader";
 import { z } from "zod";
 
