@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Activity, Database, History as HistoryIcon, Brain, LogIn, LogOut } from "lucide-react";
+import { Activity, Database, Brain, LogOut } from "lucide-react";
 import { useState } from "react";
 import { ScenarioHistoryDrawer } from "./ScenarioHistoryDrawer";
 import { useAuth } from "@/lib/auth/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { History as HistoryIcon } from "lucide-react";
 
 export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) => void }) {
   const loc = useLocation();
@@ -32,7 +33,7 @@ export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) =>
   async function signOut() {
     await supabase.auth.signOut();
     toast.success("Signed out");
-    navigate({ to: "/" });
+    navigate({ to: "/auth" });
   }
 
   return (
@@ -71,22 +72,17 @@ export function HudHeader({ onLoadScenario }: { onLoadScenario?: (id: string) =>
               History
             </button>
           )}
-          {session ? (
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2 rounded-sm border border-border bg-panel/50 px-3 py-1.5 text-hud text-xs text-muted-foreground transition hover:border-cyan/60 hover:text-cyan"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign Out
-            </button>
-          ) : (
-            <Link
-              to="/auth"
-              className="flex items-center gap-2 rounded-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 text-hud text-xs text-cyan transition hover:bg-cyan/20"
-            >
-              <LogIn className="h-3.5 w-3.5" />
-              Sign In
-            </Link>
+          {session && (
+            <>
+              <span className="text-[10px] text-mono text-muted-foreground hidden lg:inline">{session.user.email}</span>
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 rounded-sm border border-border bg-panel/50 px-3 py-1.5 text-hud text-xs text-muted-foreground transition hover:border-cyan/60 hover:text-cyan"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
+              </button>
+            </>
           )}
         </div>
       </div>
