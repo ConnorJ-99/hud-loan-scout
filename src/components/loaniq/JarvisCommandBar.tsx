@@ -66,13 +66,13 @@ export function JarvisCommandBar({ lenders, products, onMatchedProducts }: Props
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          final += result[0].transcript;
+          final += result[0].transcript + " ";
         } else {
           interim += result[0].transcript;
         }
       }
-      if (final) {
-        setQuery((prev) => (prev + " " + final).trim());
+      if (final.trim()) {
+        setQuery((prev) => (prev ? prev + " " : "") + final.trim());
       }
       setInterimText(interim);
     };
