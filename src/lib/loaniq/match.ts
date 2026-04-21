@@ -1,4 +1,45 @@
-import type { BorrowerScenario, LenderProduct, MatchResult } from "./types";
+import type { BorrowerScenario, IncomeType, LenderProduct, MatchResult } from "./types";
+
+/**
+ * Maps borrower income types to all DB income_type values that should match.
+ * The DB may store "Full Doc", "1099", "DSCR", etc.
+ */
+function incomeTypeMatches(borrowerType: IncomeType, productTypes: string[]): boolean {
+  // If product allows everything / has an empty filter, treat as match
+  if (productTypes.length === 0) return true;
+
+  // Normalize for comparison
+  const normalized = productTypes.map((t) => t.toLowerCase().trim());
+
+  switch (borrowerType) {
+    case "W2":
+      return normalized.some((t) =>
+        t === "w2" || t === "full doc" || t === "full documentation" || t === "w-2" || t === "wage earner"
+      );
+    case "Self-Employed 1099":
+      return normalized.some((t) =>
+        t === "1099" || t === "self-employed" || t === "self employed" || t === "full doc" ||
+        t === "full documentation" || t === "self-employed 1099" || t === "p&l"
+      );
+    case "Bank Statement":
+      return normalized.some((t) =>
+        t === "bank statement" || t === "bank statements" || t === "bank stmt" || t === "alt doc"
+      );
+    case "DSCR/No-Doc":
+      return normalized.some((t) =>
+        t === "dscr" || t === "no-doc" || t === "no doc" || t === "dscr/no-doc" || t === "no income"
+      );
+    case "Retired/Asset Depletion":
+      return normalized.some((t: string) =>
+        t === "asset depletion" || t === "asset based" || t === "retired" || t === "retirement" ||
+        t === "retired/asset depletion" || t === "full doc"
+      );
+    default: {
+      const bt = borrowerType as string;
+      return normalized.some((t) => t === bt.toLowerCase());
+    }
+  }
+}
 
 export function scoreProduct(s: BorrowerScenario, p: LenderProduct): MatchResult | null {
   const dti = s.monthlyIncome > 0 ? (s.monthlyDebt / s.monthlyIncome) * 100 : 0;
@@ -12,11 +53,11 @@ export function scoreProduct(s: BorrowerScenario, p: LenderProduct): MatchResult
     return null;
   }
   if (ltv > p.maxLtv + 0.01) return null;
-  if (dti > p.maxDti + 0.5) return null;
-  if (!p.occupancies.includes(s.occupancy)) return null;
-  if (!p.propertyTypesAllowed.includes(s.propertyType)) return null;
-  if (!p.incomeTypesAllowed.includes(s.incomeType)) return null;
-  if (!(p.states.includes("ALL") || p.states.includes(s.state))) return null;
+  if (p.maxDti > 0 && dti > p.maxDti + 0.5) return null;
+  if (p.occupancies.length > 0 && !p.occupancies.includes(s.occupancy)) return null;
+  if (p.propertyTypesAllowed.length > 0 && !p.propertyTypesAllowed.includes(s.propertyType)) return null;
+  if (!incomeTypeMatches(s.incomeType, p.incomeTypesAllowed)) return null;
+  if (p.states.length > 0 && !(p.states.includes("ALL") || p.states.includes(s.state))) return null;
 
   // Loan type alignment
   if (s.loanTypePrefs.length > 0) {
@@ -69,7 +110,6 @@ export function scoreProduct(s: BorrowerScenario, p: LenderProduct): MatchResult
     score >= 80 && caveats.length === 0 ? "STRONG MATCH" :
     score >= 60 ? "POSSIBLE MATCH" : "CONDITIONAL MATCH";
 
-  // Always surface a couple highlights
   if (highlights.length === 0) {
     highlights.push(`Min FICO ${p.minFico}`, `Max LTV ${p.maxLtv}%`);
   }

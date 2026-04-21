@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Send, Loader2, Terminal } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, Loader2, Terminal, Mic, MicOff } from "lucide-react";
 import { askJarvis } from "@/lib/loaniq/ai";
-import { store } from "@/lib/loaniq/storage";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import type { Lender, LenderProduct } from "@/lib/loaniq/types";
 
 const SAMPLE_QUERIES = [
   "Who has down payment assistance down to 580 credit?",
@@ -11,10 +11,55 @@ const SAMPLE_QUERIES = [
   "Which lenders allow gift funds with FHA under 620?",
 ];
 
-export function JarvisCommandBar() {
+interface Props {
+  lenders: Lender[];
+  products: LenderProduct[];
+}
+
+export function JarvisCommandBar({ lenders, products }: Props) {
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  // Web Speech API setup
+  useEffect(() => {
+    const SpeechRecognitionCtor = (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
+
+    const recognition = new (SpeechRecognitionCtor as { new(): { continuous: boolean; interimResults: boolean; lang: string; onresult: ((event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void } })();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      if (transcript) {
+        setQuery(transcript);
+      }
+      setListening(false);
+    };
+
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  const toggleMic = () => {
+    if (!recognitionRef.current) {
+      toast.error("Speech recognition not supported in this browser");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current.stop();
+      setListening(false);
+    } else {
+      recognitionRef.current.start();
+      setListening(true);
+    }
+  };
 
   const submit = async (q?: string) => {
     const text = (q ?? query).trim();
@@ -22,8 +67,6 @@ export function JarvisCommandBar() {
     setLoading(true);
     setResponse("");
     try {
-      const lenders = store.getLenders();
-      const products = store.getProducts();
       const out = await askJarvis(text, { lenders, products });
       setResponse(out);
     } catch (e) {
@@ -41,7 +84,7 @@ export function JarvisCommandBar() {
         <div className="flex items-center gap-2 mb-3">
           <Terminal className="h-4 w-4 text-cyan" />
           <span className="text-hud text-xs text-cyan">JARVIS COMMAND BAR</span>
-          <span className="text-hud text-[10px] text-muted-foreground">// natural language query</span>
+          <span className="text-hud text-[10px] text-muted-foreground">// natural language query · {lenders.length} lenders · {products.length} products</span>
         </div>
 
         <div className="flex items-center gap-2 rounded-sm border border-cyan/40 bg-background/60 px-3 py-2.5 focus-within:border-cyan focus-within:shadow-[0_0_24px_oklch(0.82_0.16_220/0.3)] transition">
@@ -57,6 +100,17 @@ export function JarvisCommandBar() {
               !query && !loading ? "terminal-cursor" : ""
             }`}
           />
+          <button
+            onClick={toggleMic}
+            className={`flex items-center justify-center rounded-sm p-1.5 transition ${
+              listening
+                ? "bg-destructive/20 text-destructive border border-destructive/50 animate-pulse"
+                : "text-muted-foreground hover:text-cyan"
+            }`}
+            title={listening ? "Stop listening" : "Voice input"}
+          >
+            {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+          </button>
           <button
             onClick={() => submit()}
             disabled={loading || !query.trim()}

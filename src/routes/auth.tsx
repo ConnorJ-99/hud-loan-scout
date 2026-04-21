@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "LoanIQ — Sign In" },
-      { name: "description", content: "Access the LoanIQ Knowledge Expansion Center." },
+      { name: "description", content: "Sign in to access LoanIQ Mortgage Intelligence." },
     ],
   }),
   component: AuthPage,
@@ -51,7 +52,7 @@ function AuthPage() {
           options: { emailRedirectTo: `${window.location.origin}/` },
         });
         if (error) throw error;
-        toast.success("Account created. You can sign in now.");
+        toast.success("Account created. Check your email to confirm, then sign in.");
         setMode("signin");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -75,7 +76,7 @@ function AuthPage() {
         <div className="mb-6 text-center">
           <h1 className="font-display text-3xl tracking-widest text-cyan glow-text">LOANIQ</h1>
           <p className="mt-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            Knowledge Access Terminal
+            Mortgage Intelligence Terminal
           </p>
         </div>
         <form onSubmit={submit} className="space-y-4">
@@ -116,12 +117,8 @@ function AuthPage() {
         <p className="mt-6 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
           New accounts default to <span className="text-cyan">user</span> role. Admin access granted by existing admin.
         </p>
-        <div className="mt-4 text-center">
-          <Link to="/" className="text-xs text-muted-foreground hover:text-cyan">
-            ← Back to scanner
-          </Link>
-        </div>
       </Card>
+      <Toaster theme="dark" />
     </div>
   );
 }

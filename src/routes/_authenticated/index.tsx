@@ -12,11 +12,11 @@ import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "LoanIQ — Mortgage Product Matching Intelligence" },
-      { name: "description", content: "AI-powered mortgage product matching for brokers. Scan lender catalogs, surface every qualifying loan program, ranked by fit." },
+      { name: "description", content: "AI-powered mortgage product matching for brokers." },
       { property: "og:title", content: "LoanIQ — Mortgage Product Matching Intelligence" },
       { property: "og:description", content: "Jarvis-grade mortgage matcher: scan lender catalogs, find every loan a borrower qualifies for." },
     ],
@@ -35,13 +35,6 @@ function Index() {
   const [catalogProducts, setCatalogProducts] = useState<LenderProduct[]>([]);
 
   useEffect(() => {
-    // One-time cleanup: purge stale demo seed data from localStorage
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem("loaniq.lenders.v1");
-        localStorage.removeItem("loaniq.products.v1");
-      } catch {}
-    }
     loadCatalogFromDb().then(({ lenders, products }) => {
       setCatalogLenders(lenders);
       setCatalogProducts(products);
@@ -55,7 +48,6 @@ function Index() {
     setAiAnalysis("");
     await new Promise((r) => setTimeout(r, 700));
 
-    // Always pull fresh catalog so newly committed knowledge feeds the match
     const { lenders, products } = await loadCatalogFromDb();
     setCatalogLenders(lenders);
     setCatalogProducts(products);
@@ -90,6 +82,14 @@ function Index() {
     }
   };
 
+  const handleReset = () => {
+    setScenario(null);
+    setMatches([]);
+    setAiAnalysis("");
+    setAiLoading(false);
+    setInitialScenario(undefined);
+  };
+
   const loadHistoric = (id: string) => {
     const item = store.getHistory().find((h) => h.id === id);
     if (item) {
@@ -102,11 +102,11 @@ function Index() {
     <div className="min-h-screen relative">
       <HudHeader onLoadScenario={loadHistoric} />
       <main className="relative z-10 mx-auto max-w-[1800px] px-6 py-6 space-y-5">
-        <JarvisCommandBar />
+        <JarvisCommandBar lenders={catalogLenders} products={catalogProducts} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-5">
           <aside className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto pb-2">
-            <ScenarioForm initial={initialScenario} onScan={handleScan} scanning={scanning} />
+            <ScenarioForm initial={initialScenario} onScan={handleScan} onReset={handleReset} scanning={scanning} />
           </aside>
           <section>
             <ResultsPanel
