@@ -7,25 +7,35 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_QUERY = `You are LoanIQ, an expert mortgage product matching AI assistant for a mortgage broker.
-You will receive a natural-language question and a JSON catalog of lender products.
-Identify products that match the intent of the question, explain why they match, and flag caveats.
-Be precise: reference actual guideline fields (min FICO, max LTV, max DTI, DPA min FICO, allowed loan types, etc.).
-Tone: confident, conversational but technical — like a senior loan officer briefing a colleague.
-Format your response in markdown with these sections:
-**Answer** — a direct, 2-3 sentence answer.
-**Matched Products** — a bulleted list of "Lender — Product Name" with one-line rationale each.
-**Caveats** — overlays, deal-breakers, or things to verify.
-**Suggested Next Steps** — concrete actions for the broker.`;
+const SYSTEM_QUERY = `You are Jarvis, a conversational mortgage product matching AI for a mortgage broker.
+You help brokers find the right loan products by having a CONVERSATION — asking clarifying questions until you can confidently recommend products.
 
-const SYSTEM_SCENARIO = `You are LoanIQ, an expert mortgage product matching AI for a mortgage broker.
+RULES:
+1. Be conversational. If the broker's question is vague, ask 1-2 clarifying questions (FICO, property type, loan purpose, income type, state, etc.) before giving results.
+2. When you have enough info, recommend 2-4 matching products. Keep it SHORT — 2-3 bullet points per product max.
+3. STRICT FILTERING: If the user says "Conventional", ONLY show Conventional products. If they say "Hard Money", ONLY show Hard Money. Never mix product types.
+4. Exclude renovation/rehab programs (203k, Choice Renovation) unless the user specifically asks for rehab/renovation.
+5. Keep each response under 250 words. No walls of text.
+6. Reference actual guideline fields: min FICO, max LTV, max DTI, DPA, etc.
+7. Tone: confident, concise, like a senior loan officer. Not an essay writer.
+8. You can continue the conversation — the broker can ask follow-up questions to narrow down further.
+9. When recommending products, format as:
+   **[Lender Name] — [Product Name]**
+   • Key qualifying detail
+   • Key qualifying detail
+
+Do NOT use long sections like "Caveats", "Suggested Next Steps" etc. Keep it punchy.`;
+
+const SYSTEM_SCENARIO = `You are Jarvis, an expert mortgage product matching AI for a mortgage broker.
 Given a borrower scenario and a catalog of lender products, identify the TOP 3-5 products the borrower most likely qualifies for.
 Be CONCISE. Do NOT list every product — only the best fits.
+STRICT FILTERING: Only show products matching the borrower's loan type preferences. If they want Conventional, exclude FHA/VA/Hard Money. If they want Hard Money, exclude Conventional/FHA.
+Exclude renovation/rehab products (203k, Choice Renovation) unless the scenario indicates rehab intent.
 Format your response in markdown:
 **Top Picks** — 1-3 strongest matches. For each: Lender — Product, 2-3 bullet points on why it fits (reference FICO, LTV, DTI, loan type).
 **Conditional Matches** — 1-2 products that could work with caveats (1 line each).
 **Strategy** — 2-3 sentence broker action plan.
-Keep the TOTAL response under 500 words.`;
+Keep the TOTAL response under 300 words.`;
 
 const SYSTEM_EXTRACT = `You are LoanIQ's Knowledge Extractor. The user pastes raw, messy mortgage guideline text — lender matrices, product guidelines, underwriting overlays, investor emails, broker bulletins, AE updates, PDF text extracts, program announcements.
 
@@ -96,32 +106,55 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { mode, query, scenario, catalog, rawText } = body;
+    const { mode, query, messages: chatMessages, scenario, catalog, rawText } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     let system: string;
-    let userContent: string;
+    let apiMessages: { role: string; content: string }[];
     let responseFormat: Record<string, unknown> | undefined;
 
     if (mode === "scenario") {
       system = SYSTEM_SCENARIO;
-      userContent = `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
+      apiMessages = [
+        { role: "system", content: system },
+        { role: "user", content: `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}` },
+      ];
     } else if (mode === "extract") {
       system = SYSTEM_EXTRACT;
-      userContent = `RAW GUIDELINE TEXT:\n${rawText}`;
+      apiMessages = [
+        { role: "system", content: system },
+        { role: "user", content: `RAW GUIDELINE TEXT:\n${rawText}` },
+      ];
       responseFormat = { type: "json_object" };
     } else {
+      // query mode — supports multi-turn conversation
       system = SYSTEM_QUERY;
-      userContent = `QUESTION: ${query}\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
+      const catalogContext = `\n\nLENDER CATALOG:\n${JSON.stringify(catalog, null, 2)}`;
+
+      if (chatMessages && Array.isArray(chatMessages) && chatMessages.length > 0) {
+        // Multi-turn: prepend system, then all user/assistant messages
+        // Inject catalog context into the first user message
+        apiMessages = [{ role: "system", content: system }];
+        chatMessages.forEach((msg: { role: string; content: string }, idx: number) => {
+          if (idx === 0 && msg.role === "user") {
+            apiMessages.push({ role: "user", content: msg.content + catalogContext });
+          } else {
+            apiMessages.push({ role: msg.role, content: msg.content });
+          }
+        });
+      } else {
+        // Legacy single query fallback
+        apiMessages = [
+          { role: "system", content: system },
+          { role: "user", content: `QUESTION: ${query}${catalogContext}` },
+        ];
+      }
     }
 
     const requestBody: Record<string, unknown> = {
       model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userContent },
-      ],
+      messages: apiMessages,
     };
     if (responseFormat) requestBody.response_format = responseFormat;
 
@@ -159,7 +192,6 @@ serve(async (req) => {
     const content = data?.choices?.[0]?.message?.content ?? "";
 
     if (mode === "extract") {
-      // Best-effort parse — strip code fences if model added them
       const cleaned = content.replace(/^```json\s*|\s*```$/g, "").trim();
       try {
         const parsed = JSON.parse(cleaned);

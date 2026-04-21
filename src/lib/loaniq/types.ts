@@ -37,6 +37,7 @@ export interface LenderProduct {
   id: string;
   lenderId: string;
   productName: string;
+  productType?: string; // e.g. "Agency", "Non-QM", "Hard Money", etc.
   minFico: number;
   maxLtv: number;
   maxDti: number;
@@ -78,4 +79,9 @@ export interface ScenarioHistoryEntry {
   scenario: BorrowerScenario;
   topLender?: string;
   topProduct?: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
 }
