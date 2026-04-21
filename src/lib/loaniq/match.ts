@@ -34,8 +34,10 @@ function incomeTypeMatches(borrowerType: IncomeType, productTypes: string[]): bo
         t === "asset depletion" || t === "asset based" || t === "retired" || t === "retirement" ||
         t === "retired/asset depletion" || t === "full doc"
       );
-    default:
-      return normalized.some((t) => t === borrowerType.toLowerCase());
+    default: {
+      const bt = borrowerType as string;
+      return normalized.some((t) => t === bt.toLowerCase());
+    }
   }
 }
 
