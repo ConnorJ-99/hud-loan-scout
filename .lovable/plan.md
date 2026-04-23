@@ -1,67 +1,55 @@
 
 
-# Update Lender Catalog with Broker Intelligence
+# Fix: Edge Function 500 Error
 
-## Overview
+## Diagnosis
 
-Apply your detailed internal lender guide to the database. This involves updating `lenders` table fields (`internal_experience`, `reputation_notes`) and `loan_programs` table fields (`tags`, `competitive_advantages`, `notes`) with real broker experience data. Also merge the duplicate UWM lender entry.
+The `loaniq-ai` edge function is returning a non-2xx status code. Need to inspect logs and the function code to find the root cause before fixing.
 
-## Changes
+## Investigation Plan
 
-### 1. Merge duplicate UWM lender
+1. Pull recent error logs from `loaniq-ai` to see the actual stack trace / error message.
+2. Review `supabase/functions/loaniq-ai/index.ts` for the failing branch (most likely the `query` mode used by Jarvis, since that's what triggers on the home page after login).
+3. Check whether the catalog payload size, an AI gateway response shape change, or a malformed tool call is causing the throw.
 
-There are two entries: "UWM" (8 programs) and "United Wholesale Mortgage (UWM)" (3 programs). Reassign the 3 programs from the duplicate to the main "UWM" lender, then delete the duplicate lender record.
+## Likely Root Causes (to confirm during fix)
 
-### 2. Update lender-level fields
+- **AI Gateway error not handled**: The function may throw on 429/402 responses from Lovable AI gateway and bubble up as a 500 instead of a structured error.
+- **Tool-call parsing**: If Gemini returns no `tool_calls` array, accessing `.function.arguments` throws.
+- **Large catalog payload**: With 15 lenders + many programs now tagged, the prompt may exceed token limits, returning an error response that isn't gracefully handled.
+- **JSON parse failure** in `extract`/`note` modes if the model returns text wrapped in markdown fences.
 
-For each of the 15 lenders, update `internal_experience` (your summary/decision rule), `reputation_notes` (pricing/turn time/UW style notes), and `niche_advantages` where your guide adds detail beyond what exists.
+## Fix Approach
 
-| Lender | `internal_experience` (summary) | `reputation_notes` (key traits) |
-|--------|------|------|
-| A&D Mortgage | Go-to when the file is weird | Good Non-QM pricing. Solid turn times. Flexible UW. Not first choice for vanilla conventional. |
-| Brokers First | Use them because pricing is worth dealing with the system | Strong DPA (NHF) and Non-QM pricing. Portal is annoying. |
-| Champions Funding | Specialty lender for refinance-heavy investor deals | Strong investor/refi pricing. |
-| Change Wholesale | Very strong when borrower qualifies on asset/equity, not income | No Ratio DSCR standout. 20% down, no DTI/income concern. |
-| Click n' Close | Best DPA lender. First stop before comparing NHF. | Best DPA pricing, almost like straight FHA. SmartBuy top-tier. |
-| EPM | Strong renovation lender, good niche VA/refi option | Good turn times. 203(k)/renovation specialist. |
-| Greenbox Loans | One of best ITIN lenders because of leverage | ITIN up to 89% LTV — major differentiator. |
-| Lead+ Wholesale | Needs lender-specific testing before primary recommendation | Limited direct experience. |
-| Lima One Capital | Strong investor-only lane, deal-structure dependent | Fix & Flip / Bridge / Investor construction. |
-| LoanStream Mortgage | Reliable backup for ITIN files | Good pricing, not market-best. |
-| Newfi Wholesale | Often first quote for DSCR | Best DSCR pricing. |
-| NewRez | Very strong hybrid lender | Strong DSCR + agency pricing competitive with UWM. |
-| Pennymac TPO | Excellent refi lender | Free credit reports. Strong streamline execution. |
-| Quontic Bank | Pure niche lender, not agency competition | ITIN/FN/Investor niche. |
-| UWM | Default lender unless file requires something special | Best all-around agency pricing. Fastest system. Easiest portal. Strong UW consistency. |
+1. **Add defensive error handling** around the AI gateway fetch:
+   - Wrap response parsing in try/catch
+   - Always return a 200 with `{ error: "..." }` in the body so the frontend can display a friendly message instead of the generic "non-2xx" error
+   - Log the upstream status + body before responding
 
-### 3. Tag loan programs with decision-rule tags
+2. **Harden tool-call extraction** in `query` mode:
+   - Guard against missing `tool_calls`, missing `function`, and unparseable `arguments`
+   - Fall back to text-based product ID extraction when tool calls are absent
 
-Add tags to programs so Jarvis can use decision-rule logic:
+3. **Trim catalog payload** sent to the AI:
+   - Strip large fields (raw notes, full guideline text) and only send the matching-relevant fields (id, lender name, product name, FICO/LTV/DTI, loan types, tags, competitive_advantages summary)
+   - Keeps prompt under token limits and reduces latency
 
-- **UWM** FHA/Conv/VA programs: add tags `best-agency-pricing`, `fastest-portal`, `default-lender`
-- **Click n' Close** DPA programs: add `best-dpa`, `first-choice-dpa`
-- **Brokers First** NHF/DPA programs: add `strong-dpa`, `second-choice-dpa`
-- **Newfi** DSCR programs: add `best-dscr-pricing`, `first-choice-dscr`
-- **NewRez** DSCR programs: add `second-choice-dscr`
-- **A&D** DSCR/Non-QM programs: add `third-choice-dscr`, `weird-file-specialist`
-- **Greenbox** ITIN programs: add `best-itin`, `first-choice-itin`
-- **Quontic** ITIN/FN programs: add `second-choice-itin`
-- **LoanStream** ITIN programs: add `third-choice-itin`, `backup-itin`
-- **EPM** 203(k)/Renovation programs: add `best-renovation`, `first-choice-renovation`
-- **Change** No Ratio DSCR programs: add `best-no-ratio`, `first-choice-no-ratio`
-- **Lima One** Fix & Flip programs: add `first-choice-fix-flip`
-- **Champions/A&D** specialty programs: add `weird-file-specialist`
-- **Pennymac** refi/streamline programs: add `best-refi`, `best-streamline`
+4. **Strip markdown fences** from JSON responses in `extract` and `note` modes before `JSON.parse`.
 
-### 4. Update competitive_advantages on key programs
-
-Set `competitive_advantages` text on standout programs based on your guide (e.g., Greenbox ITIN: "ITIN up to 89% LTV — major differentiator", Click n' Close DPA: "SmartBuy DPA priced almost like straight FHA").
-
-## Implementation
-
-All updates will be executed as data operations (UPDATE statements) using the insert tool — no schema migrations needed. The lender merge (reassign programs + delete duplicate) will also use the insert tool.
+5. **Surface the real error** to the frontend: update `src/lib/loaniq/ai.ts` so when the edge function returns `{ error }`, it's thrown with the actual message (currently it does this but the function isn't returning structured errors on all failure paths).
 
 ## Files to Modify
 
-No code files need changes. This is purely a database data update across the `lenders` and `loan_programs` tables.
+| File | Change |
+|---|---|
+| `supabase/functions/loaniq-ai/index.ts` | Wrap all AI gateway calls in try/catch, return structured `{ error }` JSON with 200 status, harden tool-call parsing, strip markdown fences, trim catalog payload |
+| `src/lib/loaniq/ai.ts` | No change needed if it already throws on `data.error` (verify) |
+
+## Verification
+
+After deploying:
+1. Test Jarvis chat from home page with a sample query
+2. Test Quick Notes ingestion on knowledge page  
+3. Test scenario scan to confirm `analyzeScenario` (mode: scenario) still works
+4. Check edge function logs to confirm clean execution
 
