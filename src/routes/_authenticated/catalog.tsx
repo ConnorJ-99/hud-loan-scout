@@ -93,40 +93,117 @@ function CatalogPage() {
     }
   };
 
-  const saveLender = (l: Lender) => {
-    const exists = lenders.find((x) => x.id === l.id);
-    const next = exists ? lenders.map((x) => (x.id === l.id ? l : x)) : [...lenders, l];
-    setLenders(next);
-    setEditingLender(null);
-    toast.success(exists ? "Lender updated" : "Lender added");
+  const saveLender = async (l: Lender) => {
+    const isNew = isNewId(l.id);
+    try {
+      if (isNew) {
+        const { data, error } = await supabase
+          .from("lenders")
+          .insert({
+            name: l.name,
+            ae_name: l.aeName || null,
+            ae_email: l.aeEmail || null,
+            ae_phone: l.aePhone || null,
+            website: l.website || null,
+            states_licensed: l.statesLicensed,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        toast.success("Lender added");
+      } else {
+        const { error } = await supabase
+          .from("lenders")
+          .update({
+            name: l.name,
+            ae_name: l.aeName || null,
+            ae_email: l.aeEmail || null,
+            ae_phone: l.aePhone || null,
+            website: l.website || null,
+            states_licensed: l.statesLicensed,
+          })
+          .eq("id", l.id);
+        if (error) throw error;
+        toast.success("Lender updated");
+      }
+      setEditingLender(null);
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    }
   };
 
-  const deleteLender = (id: string) => {
+  const deleteLender = async (id: string) => {
     if (!confirm("Delete lender and all its products?")) return;
-    setLenders((prev) => prev.filter((l) => l.id !== id));
-    setProducts((prev) => prev.filter((p) => p.lenderId !== id));
-    if (activeLender === id) setActiveLender(null);
+    try {
+      // Programs first (no ON DELETE CASCADE in schema)
+      const { error: progErr } = await supabase.from("loan_programs").delete().eq("lender_id", id);
+      if (progErr) throw progErr;
+      const { error } = await supabase.from("lenders").delete().eq("id", id);
+      if (error) throw error;
+      if (activeLender === id) setActiveLender(null);
+      toast.success("Lender deleted");
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    }
   };
 
-  const saveProduct = (p: LenderProduct) => {
-    const exists = products.find((x) => x.id === p.id);
-    const next = exists ? products.map((x) => (x.id === p.id ? p : x)) : [...products, p];
-    setProducts(next);
-    setEditingProduct(null);
-    toast.success(exists ? "Product updated" : "Product added");
+  const saveProduct = async (p: LenderProduct) => {
+    const isNew = isNewId(p.id);
+    const payload = {
+      lender_id: p.lenderId,
+      product_name: p.productName,
+      min_fico: p.minFico,
+      max_ltv: p.maxLtv,
+      max_dti: p.maxDti,
+      income_types: p.incomeTypesAllowed,
+      property_types: p.propertyTypesAllowed,
+      loan_types: p.loanTypes,
+      dpa_available: p.dpaAvailable,
+      dpa_min_fico: p.dpaMinFico ?? null,
+      gift_funds_allowed: p.giftFundsAllowed,
+      occupancies: p.occupancies,
+      states: p.states,
+      special_programs: p.specialPrograms,
+      notes: p.notes || null,
+      tags: p.tags,
+    };
+    try {
+      if (isNew) {
+        const { error } = await supabase.from("loan_programs").insert(payload);
+        if (error) throw error;
+        toast.success("Product added");
+      } else {
+        const { error } = await supabase.from("loan_programs").update(payload).eq("id", p.id);
+        if (error) throw error;
+        toast.success("Product updated");
+      }
+      setEditingProduct(null);
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    }
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
     if (!confirm("Delete product?")) return;
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      const { error } = await supabase.from("loan_programs").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Product deleted");
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    }
   };
 
   const newLender = () => setEditingLender({
-    id: `lndr_${Date.now()}`, name: "", aeName: "", aeEmail: "", aePhone: "", website: "", statesLicensed: ["ALL"],
+    id: `${NEW_ID_PREFIX}${Date.now()}`, name: "", aeName: "", aeEmail: "", aePhone: "", website: "", statesLicensed: ["ALL"],
   });
 
   const newProduct = (lenderId: string) => setEditingProduct({
-    id: `prd_${Date.now()}`, lenderId, productName: "",
+    id: `${NEW_ID_PREFIX}${Date.now()}`, lenderId, productName: "",
     minFico: 620, maxLtv: 95, maxDti: 50,
     incomeTypesAllowed: ["W2"], propertyTypesAllowed: ["SFR"], loanTypes: ["Conventional"],
     dpaAvailable: false, giftFundsAllowed: true, occupancies: ["Primary"],
