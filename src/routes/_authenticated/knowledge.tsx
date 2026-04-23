@@ -468,25 +468,25 @@ function QuickNotes() {
               <Badge className="bg-cyan text-background mb-2">LENDER: {result.lender_name}</Badge>
               <p className="text-xs text-muted-foreground">{result.note_summary}</p>
             </div>
-            {result.tags_to_add.length > 0 && (
+            {(result.tags_to_add ?? []).length > 0 && (
               <div>
                 <p className="text-[10px] text-muted-foreground font-hud mb-1">TAGS TO ADD:</p>
                 <div className="flex flex-wrap gap-1">
-                  {result.tags_to_add.map((t) => (
+                  {(result.tags_to_add ?? []).map((t) => (
                     <Badge key={t} variant="outline" className="text-[9px] text-cyan border-cyan/50">{t}</Badge>
                   ))}
                 </div>
               </div>
             )}
             <div>
-              <p className="text-[10px] text-muted-foreground font-hud mb-1">PROGRAMS TO UPDATE ({result.programs_affected.length}):</p>
+              <p className="text-[10px] text-muted-foreground font-hud mb-1">PROGRAMS TO UPDATE ({(result.programs_affected ?? []).length}):</p>
               <div className="space-y-2">
-                {result.programs_affected.map((p) => (
+                {(result.programs_affected ?? []).map((p) => (
                   <div key={p.product_id} className="border border-border rounded p-2 bg-background/40 text-xs">
                     <span className="font-mono text-[10px] text-muted-foreground">{p.product_id.slice(0, 8)}...</span>
-                    {p.add_to_tags.length > 0 && (
+                    {(p.add_to_tags ?? []).length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {p.add_to_tags.map((t) => (
+                        {(p.add_to_tags ?? []).map((t) => (
                           <Badge key={t} variant="outline" className="text-[9px]">+{t}</Badge>
                         ))}
                       </div>
