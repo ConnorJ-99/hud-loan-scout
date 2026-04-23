@@ -8,6 +8,12 @@ import { Plus, Pencil, Trash2, X, Upload, FileText, Loader2, ChevronRight } from
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
+
+// Sentinel prefix used for client-generated IDs of UNSAVED records.
+// Anything starting with this is a "new" entity (insert), not an existing UUID.
+const NEW_ID_PREFIX = "new_";
+const isNewId = (id: string) => id.startsWith(NEW_ID_PREFIX);
 
 export const Route = createFileRoute("/_authenticated/catalog")({
   head: () => ({
