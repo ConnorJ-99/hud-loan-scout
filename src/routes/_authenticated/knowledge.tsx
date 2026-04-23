@@ -317,8 +317,20 @@ function QuickNotes() {
       const { lenders, products } = await loadCatalogFromDb();
       const catalog = { lenders, products };
       const res = await processLenderNote(noteText, catalog);
-      setResult(res);
-      toast.success(`Identified ${res.programs_affected.length} program(s) to update for ${res.lender_name}`);
+      // Defensive normalization — AI sometimes omits arrays
+      const normalized: NoteResult = {
+        lender_name: res?.lender_name ?? "Unknown",
+        note_summary: res?.note_summary ?? noteText,
+        tags_to_add: Array.isArray(res?.tags_to_add) ? res.tags_to_add : [],
+        programs_affected: Array.isArray(res?.programs_affected) ? res.programs_affected : [],
+      };
+      // Filter to only programs that actually exist in our catalog (real UUIDs)
+      const validIds = new Set(products.map((p) => p.id));
+      normalized.programs_affected = normalized.programs_affected.filter(
+        (p) => p.product_id && validIds.has(p.product_id),
+      );
+      setResult(normalized);
+      toast.success(`Identified ${normalized.programs_affected.length} program(s) to update for ${normalized.lender_name}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Processing failed");
     } finally {
@@ -333,17 +345,16 @@ function QuickNotes() {
       let updated = 0;
       for (const prog of result.programs_affected) {
         const updates: { tags?: string[]; notes?: string; competitive_advantages?: string } = {};
-        if (prog.add_to_tags && prog.add_to_tags.length > 0) {
-          // Fetch current tags and merge
+        const addTags = Array.isArray(prog.add_to_tags) ? prog.add_to_tags : [];
+        if (addTags.length > 0) {
           const { data: current } = await supabase
             .from("loan_programs")
-            .select("tags, notes, competitive_advantages")
+            .select("tags")
             .eq("id", prog.product_id)
-            .single();
+            .maybeSingle();
           if (current) {
             const existingTags = (current.tags as string[]) || [];
-            const newTags = [...new Set([...existingTags, ...prog.add_to_tags])];
-            updates.tags = newTags;
+            updates.tags = [...new Set([...existingTags, ...addTags])];
           }
         }
         if (prog.add_to_notes) {
@@ -351,7 +362,7 @@ function QuickNotes() {
             .from("loan_programs")
             .select("notes")
             .eq("id", prog.product_id)
-            .single();
+            .maybeSingle();
           const existing = (current?.notes as string) || "";
           updates.notes = existing ? `${existing}\n${prog.add_to_notes}` : prog.add_to_notes;
         }
@@ -360,15 +371,19 @@ function QuickNotes() {
             .from("loan_programs")
             .select("competitive_advantages")
             .eq("id", prog.product_id)
-            .single();
+            .maybeSingle();
           const existing = (current?.competitive_advantages as string) || "";
           updates.competitive_advantages = existing
             ? `${existing}; ${prog.add_to_competitive_advantages}`
             : prog.add_to_competitive_advantages;
         }
         if (Object.keys(updates).length > 0) {
-          await supabase.from("loan_programs").update(updates).eq("id", prog.product_id);
-          updated++;
+          const { error: updErr } = await supabase
+            .from("loan_programs")
+            .update(updates)
+            .eq("id", prog.product_id);
+          if (!updErr) updated++;
+          else console.warn("Failed updating program", prog.product_id, updErr);
         }
       }
 
