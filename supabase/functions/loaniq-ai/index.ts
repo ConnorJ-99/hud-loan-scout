@@ -409,15 +409,52 @@ serve(async (req) => {
     const message = choice?.message;
     const content = typeof message?.content === "string" ? message.content : "";
 
-    if (mode === "extract") {
-      const cleaned = stripFences(content);
-      try {
-        const parsed = JSON.parse(cleaned);
-        return jsonOk({ extraction: parsed });
-      } catch (e) {
-        console.error("extract parse fail", e, cleaned.slice(0, 400));
-        return jsonOk({ error: "Could not parse AI extraction. Try again or paste smaller chunks." });
+    if (mode === "analyze" || mode === "extract") {
+      // Prefer tool call args; fall back to JSON content
+      let parsed: any = null;
+      const toolCalls = message?.tool_calls;
+      if (Array.isArray(toolCalls)) {
+        for (const tc of toolCalls) {
+          if (tc?.function?.name === "analyze_product") {
+            const argsStr = tc?.function?.arguments;
+            if (typeof argsStr === "string" && argsStr.trim()) {
+              try { parsed = JSON.parse(argsStr); } catch (e) {
+                console.error("analyze tool args parse fail", e, argsStr.slice(0, 400));
+              }
+            }
+          }
+        }
       }
+      if (!parsed && content) {
+        try { parsed = JSON.parse(stripFences(content)); } catch { /* ignore */ }
+      }
+      if (!parsed) {
+        return jsonOk({ error: "Could not parse AI analysis. Try again or paste a smaller chunk." });
+      }
+      // Normalize defensively
+      const programs = Array.isArray(parsed.programs) ? parsed.programs.map((p: any) => ({
+        ...p,
+        broker_brief: typeof p?.broker_brief === "string" ? p.broker_brief : "",
+        ai_triggers: Array.isArray(p?.ai_triggers) ? p.ai_triggers.filter((t: unknown) => typeof t === "string") : [],
+        tags: Array.isArray(p?.tags) ? p.tags : [],
+        occupancies: Array.isArray(p?.occupancies) ? p.occupancies : [],
+        property_types: Array.isArray(p?.property_types) ? p.property_types : [],
+        income_types: Array.isArray(p?.income_types) ? p.income_types : [],
+        loan_types: Array.isArray(p?.loan_types) ? p.loan_types : [],
+        states: Array.isArray(p?.states) ? p.states : [],
+        special_programs: Array.isArray(p?.special_programs) ? p.special_programs : [],
+        foreign_national_eligible: !!p?.foreign_national_eligible,
+        itin_eligible: !!p?.itin_eligible,
+        dpa_available: !!p?.dpa_available,
+        gift_funds_allowed: !!p?.gift_funds_allowed,
+      })) : [];
+      const normalized = {
+        lender: parsed.lender ?? { name: "Unknown Lender", states_licensed: [] },
+        programs,
+        overlays: Array.isArray(parsed.overlays) ? parsed.overlays : [],
+        summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      };
+      return jsonOk({ extraction: normalized, analysis: normalized });
     }
 
     if (mode === "note") {
