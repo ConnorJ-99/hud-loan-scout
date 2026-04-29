@@ -63,6 +63,8 @@ export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products
         specialPrograms: (p.special_programs as SpecialNeed[]) ?? [],
         notes: p.notes ?? "",
         tags: (p.tags as string[]) ?? [],
+        brokerBrief: (p as { broker_brief?: string | null }).broker_brief ?? undefined,
+        aiTriggers: ((p as { ai_triggers?: string[] | null }).ai_triggers as string[]) ?? [],
       };
     });
 
