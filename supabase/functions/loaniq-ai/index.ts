@@ -318,13 +318,13 @@ serve(async (req) => {
         { role: "system", content: system },
         { role: "user", content: `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(trimmedCatalog, null, 2)}` },
       ];
-    } else if (mode === "extract") {
-      system = SYSTEM_EXTRACT;
+    } else if (mode === "analyze" || mode === "extract") {
+      // "extract" kept as alias for backward compat — both produce broker briefs now
+      system = SYSTEM_ANALYZE;
       apiMessages = [
         { role: "system", content: system },
-        { role: "user", content: `RAW GUIDELINE TEXT:\n${rawText}` },
+        { role: "user", content: `RAW LENDER TEXT:\n${rawText}\n\nAnalyze this and call analyze_product with the structured result.` },
       ];
-      responseFormat = { type: "json_object" };
     } else if (mode === "note") {
       system = SYSTEM_NOTE;
       apiMessages = [
