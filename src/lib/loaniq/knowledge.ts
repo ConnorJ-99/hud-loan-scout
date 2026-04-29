@@ -42,6 +42,8 @@ export interface ExtractionResult {
     special_programs: string[];
     notes: string | null;
     tags: string[];
+    broker_brief: string;
+    ai_triggers: string[];
   }>;
   overlays: Array<{
     overlay_type: string;
@@ -49,6 +51,17 @@ export interface ExtractionResult {
     applies_to_program: string | null;
   }>;
   summary: string;
+}
+
+export type AnalysisResult = ExtractionResult;
+
+export async function analyzeProduct(rawText: string): Promise<ExtractionResult> {
+  const { data, error } = await supabase.functions.invoke("loaniq-ai", {
+    body: { mode: "analyze", rawText },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return (data.analysis ?? data.extraction) as ExtractionResult;
 }
 
 export async function extractGuidelines(rawText: string): Promise<ExtractionResult> {
