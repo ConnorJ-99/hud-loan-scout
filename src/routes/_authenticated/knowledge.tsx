@@ -208,7 +208,7 @@ function PasteAndLearn() {
       </Card>
 
       <Card className="p-6 hud-corners bg-panel/80">
-        <h3 className="font-hud tracking-wider text-cyan mb-3">STRUCTURED EXTRACTION</h3>
+        <h3 className="font-hud tracking-wider text-cyan mb-3">PRODUCT INTELLIGENCE BRIEF</h3>
         {!extraction && !analyzing && (
           <div className="flex items-center justify-center h-[450px] border border-dashed border-border rounded">
             <p className="text-xs text-muted-foreground font-hud tracking-wider">AWAITING INPUT...</p>
@@ -217,12 +217,12 @@ function PasteAndLearn() {
         {analyzing && (
           <div className="flex flex-col items-center justify-center h-[450px] gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-cyan" />
-            <p className="text-xs text-muted-foreground font-hud tracking-wider">JARVIS PARSING GUIDELINES...</p>
+            <p className="text-xs text-muted-foreground font-hud tracking-wider">JARVIS ANALYZING DEAL STRATEGY...</p>
           </div>
         )}
         {extraction && (
-          <ScrollArea className="h-[450px] pr-3">
-            <div className="space-y-4">
+          <ScrollArea className="h-[600px] pr-3">
+            <div className="space-y-5">
               <div>
                 <Badge className="bg-cyan text-background mb-2">LENDER</Badge>
                 <h4 className="font-display text-lg text-cyan">{extraction.lender.name}</h4>
@@ -232,33 +232,41 @@ function PasteAndLearn() {
                 {extraction.lender.states_licensed.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-1">States: {extraction.lender.states_licensed.join(", ")}</p>
                 )}
-                {extraction.lender.niche_advantages && (
-                  <p className="text-xs text-cyan/80 mt-1 italic">★ {extraction.lender.niche_advantages}</p>
+                {extraction.summary && (
+                  <p className="text-xs text-foreground/80 italic mt-2">{extraction.summary}</p>
                 )}
               </div>
 
               <div>
                 <Badge className="bg-blue-accent text-background mb-2">PROGRAMS ({extraction.programs.length})</Badge>
-                <div className="space-y-3">
+                <div className="space-y-5">
                   {extraction.programs.map((p, i) => (
-                    <div key={i} className="border border-border rounded p-3 bg-background/40">
-                      <h5 className="font-hud text-sm text-foreground">{p.product_name}</h5>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[11px] font-mono text-muted-foreground">
-                        {p.min_fico !== null && <span>FICO ≥ <span className="text-cyan">{p.min_fico}</span></span>}
-                        {p.max_ltv !== null && <span>LTV ≤ <span className="text-cyan">{p.max_ltv}%</span></span>}
-                        {p.max_dti !== null && <span>DTI ≤ <span className="text-cyan">{p.max_dti}%</span></span>}
-                        {p.dscr_min !== null && <span>DSCR ≥ <span className="text-cyan">{p.dscr_min}</span></span>}
-                        {p.reserve_months !== null && <span>Reserves: <span className="text-cyan">{p.reserve_months}mo</span></span>}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
+                    <div key={i} className="border border-border rounded p-4 bg-background/40">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h5 className="font-hud text-base text-cyan">{p.product_name}</h5>
                         {p.dpa_available && <Badge variant="outline" className="text-[9px]">DPA</Badge>}
                         {p.foreign_national_eligible && <Badge variant="outline" className="text-[9px]">FN</Badge>}
                         {p.itin_eligible && <Badge variant="outline" className="text-[9px]">ITIN</Badge>}
-                        {p.gift_funds_allowed && <Badge variant="outline" className="text-[9px]">GIFT</Badge>}
-                        {p.tags.map((t) => <Badge key={t} variant="outline" className="text-[9px]">{t}</Badge>)}
+                        {(p.tags ?? []).map((t) => <Badge key={t} variant="outline" className="text-[9px]">{t}</Badge>)}
                       </div>
-                      {p.competitive_advantages && (
-                        <p className="text-[10px] text-cyan/70 italic mt-2">★ {p.competitive_advantages}</p>
+                      {p.broker_brief ? (
+                        <div className="prose prose-sm prose-invert max-w-none text-foreground/90 [&_h2]:text-cyan [&_h2]:font-hud [&_h2]:tracking-wider [&_h2]:text-sm [&_h2]:mt-4 [&_h2]:mb-1 [&_h3]:text-foreground [&_h3]:text-xs [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:mt-2 [&_p]:text-xs [&_p]:leading-relaxed [&_li]:text-xs [&_strong]:text-cyan/90 [&_ul]:my-1 [&_ol]:my-1">
+                          <ReactMarkdown>{p.broker_brief}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground italic">No brief generated.</p>
+                      )}
+                      {(p.ai_triggers ?? []).length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-border/50">
+                          <p className="text-[10px] font-hud tracking-wider text-cyan mb-1.5">AI TRIGGERS</p>
+                          <div className="flex flex-wrap gap-1">
+                            {p.ai_triggers.map((t, idx) => (
+                              <span key={idx} className="rounded-sm border border-cyan/40 bg-cyan/5 px-2 py-0.5 text-[10px] text-cyan/90 font-mono">
+                                "{t}"
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -276,13 +284,21 @@ function PasteAndLearn() {
                 </div>
               )}
 
-              <div className="pt-3 border-t border-border">
+              <div className="pt-3 border-t border-border flex gap-2">
                 <Button
                   onClick={commit}
                   disabled={committing}
-                  className="w-full font-hud tracking-widest bg-cyan text-background hover:bg-cyan/90"
+                  className="flex-1 font-hud tracking-widest bg-cyan text-background hover:bg-cyan/90"
                 >
                   {committing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> COMMITTING</> : <>COMMIT TO KNOWLEDGE BASE →</>}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setExtraction(null)}
+                  disabled={committing}
+                  className="font-hud tracking-widest"
+                >
+                  DISCARD
                 </Button>
               </div>
             </div>
