@@ -11,6 +11,8 @@ const SYSTEM_QUERY = `You are Jarvis, a mortgage broker's internal assistant. Yo
 
 CONTEXT: The broker is licensed ONLY in Texas. Never ask which state. Always assume Texas.
 
+The catalog includes a brokerBrief (use case + underwriting strategy summary) and aiTriggers (borrower phrases that map to this product). MATCH on these first — they reflect real broker experience — then verify with FICO/LTV/DTI/loan type.
+
 RULES:
 1. Keep EVERY response under 50 words. Be direct.
 2. Ask at most ONE clarifying question per turn — only if truly needed (e.g. FICO, occupancy, income type, veteran status, loan amount). Skip questions you can infer.
@@ -34,67 +36,60 @@ Format your response in markdown:
 **Strategy** — 2-3 sentence broker action plan.
 Keep the TOTAL response under 300 words.`;
 
-const SYSTEM_EXTRACT = `You are LoanIQ's Knowledge Extractor. The user pastes raw, messy mortgage guideline text — lender matrices, product guidelines, underwriting overlays, investor emails, broker bulletins, AE updates, PDF text extracts, program announcements.
+const SYSTEM_ANALYZE = `You are LoanIQ's Product Intelligence Analyzer.
 
-Your job: extract structured lender intelligence and return STRICT JSON only (no prose, no markdown). The JSON shape MUST be:
+You are NOT a summarizer, bullet-point extractor, or PDF parser. You are a senior mortgage broker + underwriter + deal strategist.
 
-{
-  "lender": {
-    "name": string,
-    "ae_name": string|null,
-    "ae_email": string|null,
-    "ae_phone": string|null,
-    "website": string|null,
-    "states_licensed": string[],
-    "reputation_notes": string|null,
-    "avg_turn_time_days": number|null,
-    "niche_advantages": string|null
-  },
-  "programs": [
-    {
-      "product_name": string,
-      "loan_program": string|null,
-      "product_type": string|null,
-      "min_fico": number|null,
-      "max_ltv": number|null,
-      "max_dti": number|null,
-      "reserve_months": number|null,
-      "occupancies": string[],
-      "property_types": string[],
-      "income_types": string[],
-      "loan_types": string[],
-      "states": string[],
-      "min_loan_amount": number|null,
-      "max_loan_amount": number|null,
-      "seasoning_months": number|null,
-      "bk_seasoning_months": number|null,
-      "fc_seasoning_months": number|null,
-      "dscr_min": number|null,
-      "foreign_national_eligible": boolean,
-      "itin_eligible": boolean,
-      "dpa_available": boolean,
-      "dpa_min_fico": number|null,
-      "gift_funds_allowed": boolean,
-      "exception_policy": string|null,
-      "niche_advantages": string|null,
-      "competitive_advantages": string|null,
-      "special_programs": string[],
-      "notes": string|null,
-      "tags": string[]
-    }
-  ],
-  "overlays": [
-    { "overlay_type": string, "description": string, "applies_to_program": string|null }
-  ],
-  "summary": string
-}
+Your job: take raw pasted lender text and convert it into BROKER-SIDE DECISION INTELLIGENCE — when to use, why it saves deals, how it qualifies borrowers, what kills the deal, what operational traps exist. Think like a producing LO structuring real loans.
 
-Rules:
-- If the lender name is not stated, infer from context or use "Unknown Lender".
-- LTVs and DTIs are PERCENT numbers (e.g. 80, 45). Not decimals.
-- Use ISO state codes (CA, TX, FL, ALL).
-- Empty arrays not null for array fields.
-- Return ONLY the JSON object. No backticks, no commentary.`;
+For EACH product identified, produce a markdown analyst brief (broker_brief field) with these EXACT 11 sections, in this exact order, using these exact headings:
+
+## PRODUCT SUMMARY
+### Product Name
+### Core Use Case
+(transaction strategy — buy before sell, DSCR for first-time investor, ITIN, DPA, non-QM income workaround, etc.)
+
+## WHY THIS PRODUCT MATTERS
+(why it exists, what borrower pain it solves: trapped equity, DTI problems, self-employed income, non-contingent offers, debt payoff, reserve shortages)
+
+## IDEAL BORROWER PROFILE
+**Strong fit:**
+- ...
+**Weak fit:**
+- ...
+
+## HARD GUIDELINES
+(true hard stops only: min FICO, max LTV, occupancy, state, property eligibility, reserves, max loan amount, entity, experience, seasoning)
+
+## UNDERWRITING STRATEGY
+(HOW the deal gets approved: DTI exclusion, rental offset, DSCR qualification, asset depletion, business bank statements, debt payoff strategy, bridge payoff exclusion, LLC borrower structure, delayed financing)
+
+## FUNDS / STRUCTURE BENEFITS
+(what borrower can use funds for: down payment, closing costs, rehab, reserves, debt payoff, bridge funds, seller concessions, IO structure)
+
+## COST STRUCTURE
+(fees, points, contract fees, prepayment penalties, balloons, escrow, monthly payment structure — flag unusual fees)
+
+## OPERATIONAL TRAPS
+(timeline risks, funding traps, CD/title issues, sequencing requirements, closing gaps, lender-specific conditions — where deals die)
+
+## REQUIRED DOCUMENT STACK
+(critical docs only: contract, leases, tax returns, bank statements, operating agreements, appraisal, final CD, reserves verification)
+
+## AI DECISION TRIGGERS
+(exact borrower phrases that should trigger this product, in quotes — e.g. "I need to sell first", "My DTI is too high", "I want to buy under my LLC")
+
+## INTERNAL RED FLAGS
+(when this product should NOT be recommended: weak credit, condo restrictions, no reserves, FSBO, short seasoning, poor marketability)
+
+HARD RULES:
+- Do NOT summarize or restate the input.
+- Do NOT produce shallow bullets.
+- Be decisive. Be analytical. Be operational.
+- If the input is thin, infer like a senior broker would — but only what's defensible.
+- ai_triggers must be an array of short borrower phrases (5-12 of them) extracted from the AI DECISION TRIGGERS section.
+
+You MUST call the analyze_product tool to return the structured result. Do not return prose.`;
 
 const SYSTEM_NOTE = `You are LoanIQ's intelligence processor. The user writes a short observation or note about a lender (e.g. "UWM has the best pricing for FHA, VA, and conventional" or "Kind Lending is slow on appraisals").
 
@@ -142,6 +137,96 @@ const RECOMMEND_PRODUCTS_TOOL = {
       },
       required: ["product_ids"],
       additionalProperties: false,
+    },
+  },
+};
+
+// Tool for the Product Intelligence Analyzer — produces decision-grade broker briefs
+const ANALYZE_PRODUCT_TOOL = {
+  type: "function",
+  function: {
+    name: "analyze_product",
+    description: "Return the structured product intelligence analysis. Always call this — never return prose.",
+    parameters: {
+      type: "object",
+      properties: {
+        lender: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            ae_name: { type: ["string", "null"] },
+            ae_email: { type: ["string", "null"] },
+            ae_phone: { type: ["string", "null"] },
+            website: { type: ["string", "null"] },
+            states_licensed: { type: "array", items: { type: "string" } },
+            reputation_notes: { type: ["string", "null"] },
+            avg_turn_time_days: { type: ["number", "null"] },
+            niche_advantages: { type: ["string", "null"] },
+          },
+          required: ["name", "states_licensed"],
+        },
+        programs: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              product_name: { type: "string" },
+              loan_program: { type: ["string", "null"] },
+              product_type: { type: ["string", "null"] },
+              min_fico: { type: ["number", "null"] },
+              max_ltv: { type: ["number", "null"] },
+              max_dti: { type: ["number", "null"] },
+              reserve_months: { type: ["number", "null"] },
+              occupancies: { type: "array", items: { type: "string" } },
+              property_types: { type: "array", items: { type: "string" } },
+              income_types: { type: "array", items: { type: "string" } },
+              loan_types: { type: "array", items: { type: "string" } },
+              states: { type: "array", items: { type: "string" } },
+              min_loan_amount: { type: ["number", "null"] },
+              max_loan_amount: { type: ["number", "null"] },
+              seasoning_months: { type: ["number", "null"] },
+              bk_seasoning_months: { type: ["number", "null"] },
+              fc_seasoning_months: { type: ["number", "null"] },
+              dscr_min: { type: ["number", "null"] },
+              foreign_national_eligible: { type: "boolean" },
+              itin_eligible: { type: "boolean" },
+              dpa_available: { type: "boolean" },
+              dpa_min_fico: { type: ["number", "null"] },
+              gift_funds_allowed: { type: "boolean" },
+              exception_policy: { type: ["string", "null"] },
+              niche_advantages: { type: ["string", "null"] },
+              competitive_advantages: { type: ["string", "null"] },
+              special_programs: { type: "array", items: { type: "string" } },
+              notes: { type: ["string", "null"] },
+              tags: { type: "array", items: { type: "string" } },
+              broker_brief: {
+                type: "string",
+                description: "Full markdown analyst brief with all 11 required sections in order",
+              },
+              ai_triggers: {
+                type: "array",
+                items: { type: "string" },
+                description: "5-12 short borrower phrases that should trigger this product",
+              },
+            },
+            required: ["product_name", "broker_brief", "ai_triggers"],
+          },
+        },
+        overlays: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              overlay_type: { type: "string" },
+              description: { type: "string" },
+              applies_to_program: { type: ["string", "null"] },
+            },
+            required: ["overlay_type", "description"],
+          },
+        },
+        summary: { type: "string" },
+      },
+      required: ["lender", "programs", "summary"],
     },
   },
 };
@@ -199,6 +284,8 @@ function trimCatalog(catalog: unknown): unknown {
         foreignNationalEligible: p?.foreignNationalEligible,
         dscrMin: p?.dscrMin,
         competitiveAdvantages: typeof p?.competitiveAdvantages === "string" ? p.competitiveAdvantages.slice(0, 200) : p?.competitiveAdvantages,
+        brokerBrief: typeof p?.brokerBrief === "string" ? p.brokerBrief.slice(0, 600) : null,
+        aiTriggers: Array.isArray(p?.aiTriggers) ? p.aiTriggers.slice(0, 12) : [],
       }))
     : [];
   return { lenders, products };
@@ -231,13 +318,13 @@ serve(async (req) => {
         { role: "system", content: system },
         { role: "user", content: `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(trimmedCatalog, null, 2)}` },
       ];
-    } else if (mode === "extract") {
-      system = SYSTEM_EXTRACT;
+    } else if (mode === "analyze" || mode === "extract") {
+      // "extract" kept as alias for backward compat — both produce broker briefs now
+      system = SYSTEM_ANALYZE;
       apiMessages = [
         { role: "system", content: system },
-        { role: "user", content: `RAW GUIDELINE TEXT:\n${rawText}` },
+        { role: "user", content: `RAW LENDER TEXT:\n${rawText}\n\nAnalyze this and call analyze_product with the structured result.` },
       ];
-      responseFormat = { type: "json_object" };
     } else if (mode === "note") {
       system = SYSTEM_NOTE;
       apiMessages = [
@@ -268,14 +355,19 @@ serve(async (req) => {
       }
     }
 
+    const isAnalyze = mode === "analyze" || mode === "extract";
     const requestBody: Record<string, unknown> = {
-      model: "google/gemini-3-flash-preview",
+      model: isAnalyze ? "openai/gpt-5" : "google/gemini-3-flash-preview",
       messages: apiMessages,
     };
     if (responseFormat) requestBody.response_format = responseFormat;
     if (useTools) {
       requestBody.tools = [RECOMMEND_PRODUCTS_TOOL];
       requestBody.tool_choice = "auto";
+    }
+    if (isAnalyze) {
+      requestBody.tools = [ANALYZE_PRODUCT_TOOL];
+      requestBody.tool_choice = { type: "function", function: { name: "analyze_product" } };
     }
 
     let resp: Response;
@@ -317,15 +409,52 @@ serve(async (req) => {
     const message = choice?.message;
     const content = typeof message?.content === "string" ? message.content : "";
 
-    if (mode === "extract") {
-      const cleaned = stripFences(content);
-      try {
-        const parsed = JSON.parse(cleaned);
-        return jsonOk({ extraction: parsed });
-      } catch (e) {
-        console.error("extract parse fail", e, cleaned.slice(0, 400));
-        return jsonOk({ error: "Could not parse AI extraction. Try again or paste smaller chunks." });
+    if (mode === "analyze" || mode === "extract") {
+      // Prefer tool call args; fall back to JSON content
+      let parsed: any = null;
+      const toolCalls = message?.tool_calls;
+      if (Array.isArray(toolCalls)) {
+        for (const tc of toolCalls) {
+          if (tc?.function?.name === "analyze_product") {
+            const argsStr = tc?.function?.arguments;
+            if (typeof argsStr === "string" && argsStr.trim()) {
+              try { parsed = JSON.parse(argsStr); } catch (e) {
+                console.error("analyze tool args parse fail", e, argsStr.slice(0, 400));
+              }
+            }
+          }
+        }
       }
+      if (!parsed && content) {
+        try { parsed = JSON.parse(stripFences(content)); } catch { /* ignore */ }
+      }
+      if (!parsed) {
+        return jsonOk({ error: "Could not parse AI analysis. Try again or paste a smaller chunk." });
+      }
+      // Normalize defensively
+      const programs = Array.isArray(parsed.programs) ? parsed.programs.map((p: any) => ({
+        ...p,
+        broker_brief: typeof p?.broker_brief === "string" ? p.broker_brief : "",
+        ai_triggers: Array.isArray(p?.ai_triggers) ? p.ai_triggers.filter((t: unknown) => typeof t === "string") : [],
+        tags: Array.isArray(p?.tags) ? p.tags : [],
+        occupancies: Array.isArray(p?.occupancies) ? p.occupancies : [],
+        property_types: Array.isArray(p?.property_types) ? p.property_types : [],
+        income_types: Array.isArray(p?.income_types) ? p.income_types : [],
+        loan_types: Array.isArray(p?.loan_types) ? p.loan_types : [],
+        states: Array.isArray(p?.states) ? p.states : [],
+        special_programs: Array.isArray(p?.special_programs) ? p.special_programs : [],
+        foreign_national_eligible: !!p?.foreign_national_eligible,
+        itin_eligible: !!p?.itin_eligible,
+        dpa_available: !!p?.dpa_available,
+        gift_funds_allowed: !!p?.gift_funds_allowed,
+      })) : [];
+      const normalized = {
+        lender: parsed.lender ?? { name: "Unknown Lender", states_licensed: [] },
+        programs,
+        overlays: Array.isArray(parsed.overlays) ? parsed.overlays : [],
+        summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      };
+      return jsonOk({ extraction: normalized, analysis: normalized });
     }
 
     if (mode === "note") {

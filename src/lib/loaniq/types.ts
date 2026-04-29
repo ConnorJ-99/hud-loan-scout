@@ -52,6 +52,8 @@ export interface LenderProduct {
   specialPrograms: SpecialNeed[];
   notes: string;
   tags: string[];
+  brokerBrief?: string;
+  aiTriggers?: string[];
 }
 
 export interface Lender {

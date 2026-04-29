@@ -42,6 +42,8 @@ export interface ExtractionResult {
     special_programs: string[];
     notes: string | null;
     tags: string[];
+    broker_brief: string;
+    ai_triggers: string[];
   }>;
   overlays: Array<{
     overlay_type: string;
@@ -51,13 +53,20 @@ export interface ExtractionResult {
   summary: string;
 }
 
-export async function extractGuidelines(rawText: string): Promise<ExtractionResult> {
+export type AnalysisResult = ExtractionResult;
+
+export async function analyzeProduct(rawText: string): Promise<ExtractionResult> {
   const { data, error } = await supabase.functions.invoke("loaniq-ai", {
-    body: { mode: "extract", rawText },
+    body: { mode: "analyze", rawText },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
-  return data.extraction as ExtractionResult;
+  return (data.analysis ?? data.extraction) as ExtractionResult;
+}
+
+export async function extractGuidelines(rawText: string): Promise<ExtractionResult> {
+  // Legacy alias — now produces a full broker analyst brief.
+  return analyzeProduct(rawText);
 }
 
 export async function commitExtraction(
@@ -144,6 +153,8 @@ export async function commitExtraction(
         special_programs: p.special_programs,
         notes: p.notes,
         tags: p.tags,
+        broker_brief: p.broker_brief ?? null,
+        ai_triggers: Array.isArray(p.ai_triggers) ? p.ai_triggers : [],
       })
       .select("id")
       .single();
@@ -173,3 +184,5 @@ export async function commitExtraction(
 
   return { lenderId, programIds };
 }
+
+export const commitAnalysis = commitExtraction;
