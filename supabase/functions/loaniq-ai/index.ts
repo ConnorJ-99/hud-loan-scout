@@ -284,6 +284,8 @@ function trimCatalog(catalog: unknown): unknown {
         foreignNationalEligible: p?.foreignNationalEligible,
         dscrMin: p?.dscrMin,
         competitiveAdvantages: typeof p?.competitiveAdvantages === "string" ? p.competitiveAdvantages.slice(0, 200) : p?.competitiveAdvantages,
+        brokerBrief: typeof p?.brokerBrief === "string" ? p.brokerBrief.slice(0, 600) : null,
+        aiTriggers: Array.isArray(p?.aiTriggers) ? p.aiTriggers.slice(0, 12) : [],
       }))
     : [];
   return { lenders, products };
