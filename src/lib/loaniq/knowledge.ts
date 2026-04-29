@@ -65,12 +65,8 @@ export async function analyzeProduct(rawText: string): Promise<ExtractionResult>
 }
 
 export async function extractGuidelines(rawText: string): Promise<ExtractionResult> {
-  const { data, error } = await supabase.functions.invoke("loaniq-ai", {
-    body: { mode: "extract", rawText },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data.extraction as ExtractionResult;
+  // Legacy alias — now produces a full broker analyst brief.
+  return analyzeProduct(rawText);
 }
 
 export async function commitExtraction(
