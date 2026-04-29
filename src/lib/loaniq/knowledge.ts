@@ -184,3 +184,5 @@ export async function commitExtraction(
 
   return { lenderId, programIds };
 }
+
+export const commitAnalysis = commitExtraction;
