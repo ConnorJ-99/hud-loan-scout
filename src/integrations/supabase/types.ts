@@ -109,7 +109,9 @@ export type Database = {
       }
       loan_programs: {
         Row: {
+          ai_triggers: string[]
           bk_seasoning_months: number | null
+          broker_brief: string | null
           competitive_advantages: string | null
           created_at: string
           created_by: string | null
@@ -145,7 +147,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_triggers?: string[]
           bk_seasoning_months?: number | null
+          broker_brief?: string | null
           competitive_advantages?: string | null
           created_at?: string
           created_by?: string | null
@@ -181,7 +185,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_triggers?: string[]
           bk_seasoning_months?: number | null
+          broker_brief?: string | null
           competitive_advantages?: string | null
           created_at?: string
           created_by?: string | null
