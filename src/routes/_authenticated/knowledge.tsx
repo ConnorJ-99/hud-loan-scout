@@ -202,7 +202,7 @@ function PasteAndLearn() {
             {rawText.length.toLocaleString()} / 50,000 chars
           </span>
           <Button onClick={analyze} disabled={analyzing} className="font-hud tracking-widest">
-            {analyzing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> ANALYZING</> : <><Brain className="h-4 w-4 mr-2" /> EXTRACT INTEL</>}
+            {analyzing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> ANALYZING</> : <><Brain className="h-4 w-4 mr-2" /> ANALYZE PRODUCT</>}
           </Button>
         </div>
       </Card>
