@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 // Sentinel prefix used for client-generated IDs of UNSAVED records.
 // Anything starting with this is a "new" entity (insert), not an existing UUID.
