@@ -147,7 +147,7 @@ function PasteAndLearn() {
     try {
       const result = await extractGuidelines(rawText);
       setExtraction(result);
-      toast.success(`Extracted ${result.programs.length} program(s) from ${result.lender.name}`);
+      toast.success(`Analyzed ${result.programs.length} program(s) from ${result.lender.name}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Extraction failed");
     } finally {
