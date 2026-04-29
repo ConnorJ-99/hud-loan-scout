@@ -139,6 +139,96 @@ const RECOMMEND_PRODUCTS_TOOL = {
   },
 };
 
+// Tool for the Product Intelligence Analyzer — produces decision-grade broker briefs
+const ANALYZE_PRODUCT_TOOL = {
+  type: "function",
+  function: {
+    name: "analyze_product",
+    description: "Return the structured product intelligence analysis. Always call this — never return prose.",
+    parameters: {
+      type: "object",
+      properties: {
+        lender: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            ae_name: { type: ["string", "null"] },
+            ae_email: { type: ["string", "null"] },
+            ae_phone: { type: ["string", "null"] },
+            website: { type: ["string", "null"] },
+            states_licensed: { type: "array", items: { type: "string" } },
+            reputation_notes: { type: ["string", "null"] },
+            avg_turn_time_days: { type: ["number", "null"] },
+            niche_advantages: { type: ["string", "null"] },
+          },
+          required: ["name", "states_licensed"],
+        },
+        programs: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              product_name: { type: "string" },
+              loan_program: { type: ["string", "null"] },
+              product_type: { type: ["string", "null"] },
+              min_fico: { type: ["number", "null"] },
+              max_ltv: { type: ["number", "null"] },
+              max_dti: { type: ["number", "null"] },
+              reserve_months: { type: ["number", "null"] },
+              occupancies: { type: "array", items: { type: "string" } },
+              property_types: { type: "array", items: { type: "string" } },
+              income_types: { type: "array", items: { type: "string" } },
+              loan_types: { type: "array", items: { type: "string" } },
+              states: { type: "array", items: { type: "string" } },
+              min_loan_amount: { type: ["number", "null"] },
+              max_loan_amount: { type: ["number", "null"] },
+              seasoning_months: { type: ["number", "null"] },
+              bk_seasoning_months: { type: ["number", "null"] },
+              fc_seasoning_months: { type: ["number", "null"] },
+              dscr_min: { type: ["number", "null"] },
+              foreign_national_eligible: { type: "boolean" },
+              itin_eligible: { type: "boolean" },
+              dpa_available: { type: "boolean" },
+              dpa_min_fico: { type: ["number", "null"] },
+              gift_funds_allowed: { type: "boolean" },
+              exception_policy: { type: ["string", "null"] },
+              niche_advantages: { type: ["string", "null"] },
+              competitive_advantages: { type: ["string", "null"] },
+              special_programs: { type: "array", items: { type: "string" } },
+              notes: { type: ["string", "null"] },
+              tags: { type: "array", items: { type: "string" } },
+              broker_brief: {
+                type: "string",
+                description: "Full markdown analyst brief with all 11 required sections in order",
+              },
+              ai_triggers: {
+                type: "array",
+                items: { type: "string" },
+                description: "5-12 short borrower phrases that should trigger this product",
+              },
+            },
+            required: ["product_name", "broker_brief", "ai_triggers"],
+          },
+        },
+        overlays: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              overlay_type: { type: "string" },
+              description: { type: "string" },
+              applies_to_program: { type: ["string", "null"] },
+            },
+            required: ["overlay_type", "description"],
+          },
+        },
+        summary: { type: "string" },
+      },
+      required: ["lender", "programs", "summary"],
+    },
+  },
+};
+
 // Always return 200 with structured body so the frontend can read .error
 function jsonOk(body: unknown) {
   return new Response(JSON.stringify(body), {
