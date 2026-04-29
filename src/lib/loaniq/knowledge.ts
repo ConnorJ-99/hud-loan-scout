@@ -153,6 +153,8 @@ export async function commitExtraction(
         special_programs: p.special_programs,
         notes: p.notes,
         tags: p.tags,
+        broker_brief: p.broker_brief ?? null,
+        ai_triggers: Array.isArray(p.ai_triggers) ? p.ai_triggers : [],
       })
       .select("id")
       .single();
