@@ -355,14 +355,19 @@ serve(async (req) => {
       }
     }
 
+    const isAnalyze = mode === "analyze" || mode === "extract";
     const requestBody: Record<string, unknown> = {
-      model: "google/gemini-3-flash-preview",
+      model: isAnalyze ? "openai/gpt-5" : "google/gemini-3-flash-preview",
       messages: apiMessages,
     };
     if (responseFormat) requestBody.response_format = responseFormat;
     if (useTools) {
       requestBody.tools = [RECOMMEND_PRODUCTS_TOOL];
       requestBody.tool_choice = "auto";
+    }
+    if (isAnalyze) {
+      requestBody.tools = [ANALYZE_PRODUCT_TOOL];
+      requestBody.tool_choice = { type: "function", function: { name: "analyze_product" } };
     }
 
     let resp: Response;
