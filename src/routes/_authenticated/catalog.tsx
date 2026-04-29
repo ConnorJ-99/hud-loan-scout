@@ -387,6 +387,28 @@ function CatalogPage() {
                   </div>
                 </div>
 
+                {detailProduct.brokerBrief && (
+                  <div>
+                    <h3 className="text-hud text-[10px] text-cyan mb-2">BROKER BRIEF</h3>
+                    <div className="rounded-sm border border-cyan/30 bg-background/40 p-4">
+                      <div className="prose prose-sm prose-invert max-w-none text-foreground/90 [&_h2]:text-cyan [&_h2]:font-hud [&_h2]:tracking-wider [&_h2]:text-sm [&_h2]:mt-4 [&_h2]:mb-1 [&_h3]:text-foreground [&_h3]:text-xs [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:mt-2 [&_p]:text-xs [&_p]:leading-relaxed [&_li]:text-xs [&_strong]:text-cyan/90 [&_ul]:my-1 [&_ol]:my-1">
+                        <ReactMarkdown>{detailProduct.brokerBrief}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(detailProduct.aiTriggers ?? []).length > 0 && (
+                  <div>
+                    <h3 className="text-hud text-[10px] text-muted-foreground mb-2">AI TRIGGERS</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detailProduct.aiTriggers!.map((t, i) => (
+                        <span key={i} className="rounded-sm border border-cyan/40 bg-cyan/5 px-2 py-1 text-[10px] text-cyan/90 font-mono">"{t}"</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {detailProduct.notes && (
                   <div>
                     <h3 className="text-hud text-[10px] text-muted-foreground mb-2">PRODUCT NOTES & GUIDELINES</h3>
