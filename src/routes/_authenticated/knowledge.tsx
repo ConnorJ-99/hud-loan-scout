@@ -13,6 +13,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Loader2, Brain, Database, FileText, Plus, Trash2, Pencil, X, MessageSquarePlus } from "lucide-react";
 import { extractGuidelines, commitExtraction, type ExtractionResult } from "@/lib/loaniq/knowledge";
+import ReactMarkdown from "react-markdown";
 import { processLenderNote, type NoteResult } from "@/lib/loaniq/ai";
 import { loadCatalogFromDb } from "@/lib/loaniq/dbCatalog";
 import { HudHeader } from "@/components/loaniq/HudHeader";
