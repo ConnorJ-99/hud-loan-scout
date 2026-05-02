@@ -31,6 +31,8 @@ function BorrowerDetail() {
   const { id } = Route.useParams() as { id: string };
   const navigate = useNavigate();
   const [b, setB] = useState<Borrower | null>(null);
+  const [analyses, setAnalyses] = useState<{ id: string; borrower_name: string; analysis_type: string; status: string; qualifying_monthly_income: number | null; updated_at: string }[]>([]);
+  const [searches, setSearches] = useState<{ id: string; nickname: string | null; top_lender: string | null; top_product: string | null; match_count: number | null; created_at: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -42,6 +44,12 @@ function BorrowerDetail() {
       }
       setB(data as Borrower);
     });
+    supabase.from("income_analyses").select("id, borrower_name, analysis_type, status, qualifying_monthly_income, updated_at")
+      .eq("borrower_file_id", id).order("updated_at", { ascending: false })
+      .then(({ data }) => setAnalyses((data ?? []) as typeof analyses));
+    supabase.from("loan_searches").select("id, nickname, top_lender, top_product, match_count, created_at")
+      .eq("borrower_file_id", id).order("created_at", { ascending: false })
+      .then(({ data }) => setSearches((data ?? []) as typeof searches));
   }, [id, navigate]);
 
   useEffect(load, [load]);
