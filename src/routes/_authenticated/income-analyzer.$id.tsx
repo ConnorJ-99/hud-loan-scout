@@ -127,9 +127,24 @@ function AnalysisDetail() {
     toast.success("Saved");
   }
 
+  async function parseStatementById(stmtId: string, fileName?: string | null) {
+    setStatements((prev) => prev.map((s) => (s.id === stmtId ? { ...s, parse_status: "parsing" } : s)));
+    const { data, error } = await supabase.functions.invoke("parse-bank-statement", {
+      body: { statementId: stmtId },
+    });
+    if (error || data?.error) {
+      const msg = data?.error ?? error?.message ?? "Parse failed";
+      toast.error(`Parse failed${fileName ? ` (${fileName})` : ""}: ${msg}`);
+      return false;
+    }
+    toast.success(`Parsed ${fileName ?? ""}: ${data.deposits_extracted} deposits (${data.deposits_included} included)`);
+    return true;
+  }
+
   async function uploadFiles(files: FileList) {
     if (!user || !a) return;
     setUploading(true);
+    const newIds: { id: string; name: string }[] = [];
     for (const file of Array.from(files)) {
       const path = `${user.id}/${id}/${Date.now()}-${file.name}`;
       const up = await supabase.storage.from("bank-statements").upload(path, file);
@@ -137,17 +152,31 @@ function AnalysisDetail() {
         toast.error(`Upload failed: ${up.error.message}`);
         continue;
       }
-      const { error } = await supabase.from("bank_statements").insert({
-        created_by: user.id,
-        income_analysis_id: id,
-        file_path: path,
-        file_name: file.name,
-        parse_status: "uploaded",
-      });
-      if (error) toast.error(error.message);
+      const { data: row, error } = await supabase
+        .from("bank_statements")
+        .insert({
+          created_by: user.id,
+          income_analysis_id: id,
+          file_path: path,
+          file_name: file.name,
+          parse_status: "uploaded",
+        })
+        .select("id")
+        .single();
+      if (error) {
+        toast.error(error.message);
+        continue;
+      }
+      if (row) newIds.push({ id: row.id, name: file.name });
     }
     setUploading(false);
-    toast.success("Statements uploaded. Parse with AI from the statement row.");
+    if (newIds.length === 0) return;
+    toast.info(`Uploaded ${newIds.length} statement(s). Parsing…`);
+    await load();
+    // Parse sequentially to avoid hammering the AI gateway
+    for (const s of newIds) {
+      await parseStatementById(s.id, s.name);
+    }
     load();
   }
 
@@ -156,19 +185,21 @@ function AnalysisDetail() {
       toast.error("No file path");
       return;
     }
-    // Mark UI as parsing immediately
-    setStatements((prev) => prev.map((s) => s.id === stmt.id ? { ...s, parse_status: "parsing" } : s));
     toast.info(`Parsing ${stmt.file_name}…`);
-    const { data, error } = await supabase.functions.invoke("parse-bank-statement", {
-      body: { statementId: stmt.id },
-    });
-    if (error || data?.error) {
-      const msg = data?.error ?? error?.message ?? "Parse failed";
-      toast.error(`Parse failed: ${msg}`);
-      load();
+    await parseStatementById(stmt.id, stmt.file_name);
+    load();
+  }
+
+  async function parseAllUnparsed() {
+    const targets = statements.filter((s) => s.parse_status !== "parsed");
+    if (targets.length === 0) {
+      toast.info("Nothing to parse");
       return;
     }
-    toast.success(`Parsed ${data.deposits_extracted} deposits (${data.deposits_included} included)`);
+    toast.info(`Parsing ${targets.length} statement(s)…`);
+    for (const s of targets) {
+      await parseStatementById(s.id, s.file_name);
+    }
     load();
   }
 
