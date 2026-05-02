@@ -80,7 +80,7 @@ function AnalysisDetail() {
   const load = useCallback(async () => {
     const [aRes, sRes, tRes] = await Promise.all([
       supabase.from("income_analyses").select("*").eq("id", id).maybeSingle(),
-      supabase.from("bank_statements").select("id, file_name, bank_name, account_last4, period_start, period_end, parse_status").eq("income_analysis_id", id).order("created_at"),
+      supabase.from("bank_statements").select("id, file_name, bank_name, account_last4, period_start, period_end, parse_status, file_path").eq("income_analysis_id", id).order("created_at"),
       supabase.from("statement_transactions").select("id, txn_date, description, deposit_amount, classification, included_in_income, reason, manual_override").eq("income_analysis_id", id).order("txn_date"),
     ]);
     if (aRes.error || !aRes.data) {
