@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { Plus, Calculator, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/income-analyzer")({
+export const Route = createFileRoute("/_authenticated/income-analyzer/")({
   head: () => ({ meta: [{ title: "Income Analyzer — LoanIQ" }] }),
   component: IncomeAnalyzerList,
 });

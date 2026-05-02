@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { Plus, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/borrowers")({
+export const Route = createFileRoute("/_authenticated/borrowers/")({
   head: () => ({ meta: [{ title: "Borrower Files — LoanIQ" }] }),
   component: BorrowerList,
 });
