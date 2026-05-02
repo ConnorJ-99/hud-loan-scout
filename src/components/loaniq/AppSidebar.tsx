@@ -81,7 +81,7 @@ export function AppSidebar() {
             return (
               <Link
                 key={item.to}
-                to={item.to}
+                to={item.to as never}
                 className={`flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-all ${
                   active
                     ? "bg-cyan/10 text-cyan border-l-2 border-cyan"
@@ -105,7 +105,7 @@ export function AppSidebar() {
                 return (
                   <Link
                     key={item.to}
-                    to={item.to}
+                    to={item.to as never}
                     className={`flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-all ${
                       active
                         ? "bg-cyan/10 text-cyan border-l-2 border-cyan"
