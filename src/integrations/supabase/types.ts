@@ -56,6 +56,229 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          company_logo_url: string | null
+          company_name: string | null
+          created_at: string
+          default_expense_factor: number
+          id: string
+          large_deposit_threshold: number
+          report_branding: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_logo_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          default_expense_factor?: number
+          id?: string
+          large_deposit_threshold?: number
+          report_branding?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_logo_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          default_expense_factor?: number
+          id?: string
+          large_deposit_threshold?: number
+          report_branding?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bank_statements: {
+        Row: {
+          account_holder: string | null
+          account_last4: string | null
+          bank_name: string | null
+          created_at: string
+          created_by: string
+          file_name: string | null
+          file_path: string | null
+          id: string
+          income_analysis_id: string
+          parse_error: string | null
+          parse_status: string
+          period_end: string | null
+          period_start: string | null
+        }
+        Insert: {
+          account_holder?: string | null
+          account_last4?: string | null
+          bank_name?: string | null
+          created_at?: string
+          created_by: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          income_analysis_id: string
+          parse_error?: string | null
+          parse_status?: string
+          period_end?: string | null
+          period_start?: string | null
+        }
+        Update: {
+          account_holder?: string | null
+          account_last4?: string | null
+          bank_name?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          income_analysis_id?: string
+          parse_error?: string | null
+          parse_status?: string
+          period_end?: string | null
+          period_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statements_income_analysis_id_fkey"
+            columns: ["income_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "income_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      borrower_files: {
+        Row: {
+          borrower_name: string
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          loan_amount: number | null
+          loan_officer: string | null
+          loan_purpose: string | null
+          notes: string | null
+          phone: string | null
+          property_address: string | null
+          purchase_price: number | null
+          status: string
+          target_program: string | null
+          updated_at: string
+        }
+        Insert: {
+          borrower_name: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          loan_amount?: number | null
+          loan_officer?: string | null
+          loan_purpose?: string | null
+          notes?: string | null
+          phone?: string | null
+          property_address?: string | null
+          purchase_price?: number | null
+          status?: string
+          target_program?: string | null
+          updated_at?: string
+        }
+        Update: {
+          borrower_name?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          loan_amount?: number | null
+          loan_officer?: string | null
+          loan_purpose?: string | null
+          notes?: string | null
+          phone?: string | null
+          property_address?: string | null
+          purchase_price?: number | null
+          status?: string
+          target_program?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      income_analyses: {
+        Row: {
+          ai_notes: string | null
+          analysis_type: string
+          avg_monthly_deposits: number | null
+          borrower_file_id: string | null
+          borrower_name: string
+          created_at: string
+          created_by: string
+          excluded_deposits: number | null
+          expense_factor: number
+          id: string
+          large_deposit_threshold: number | null
+          months_reviewed: number | null
+          qualifying_deposits: number | null
+          qualifying_monthly_income: number | null
+          reviewer_notes: string | null
+          statement_period_end: string | null
+          statement_period_start: string | null
+          status: string
+          total_deposits: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_notes?: string | null
+          analysis_type?: string
+          avg_monthly_deposits?: number | null
+          borrower_file_id?: string | null
+          borrower_name: string
+          created_at?: string
+          created_by: string
+          excluded_deposits?: number | null
+          expense_factor?: number
+          id?: string
+          large_deposit_threshold?: number | null
+          months_reviewed?: number | null
+          qualifying_deposits?: number | null
+          qualifying_monthly_income?: number | null
+          reviewer_notes?: string | null
+          statement_period_end?: string | null
+          statement_period_start?: string | null
+          status?: string
+          total_deposits?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_notes?: string | null
+          analysis_type?: string
+          avg_monthly_deposits?: number | null
+          borrower_file_id?: string | null
+          borrower_name?: string
+          created_at?: string
+          created_by?: string
+          excluded_deposits?: number | null
+          expense_factor?: number
+          id?: string
+          large_deposit_threshold?: number | null
+          months_reviewed?: number | null
+          qualifying_deposits?: number | null
+          qualifying_monthly_income?: number | null
+          reviewer_notes?: string | null
+          statement_period_end?: string | null
+          statement_period_start?: string | null
+          status?: string
+          total_deposits?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_analyses_borrower_file_id_fkey"
+            columns: ["borrower_file_id"]
+            isOneToOne: false
+            referencedRelation: "borrower_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lenders: {
         Row: {
           ae_email: string | null
@@ -239,6 +462,53 @@ export type Database = {
           },
         ]
       }
+      loan_searches: {
+        Row: {
+          ai_summary: string | null
+          borrower_file_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          match_count: number | null
+          nickname: string | null
+          scenario: Json
+          top_lender: string | null
+          top_product: string | null
+        }
+        Insert: {
+          ai_summary?: string | null
+          borrower_file_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          match_count?: number | null
+          nickname?: string | null
+          scenario: Json
+          top_lender?: string | null
+          top_product?: string | null
+        }
+        Update: {
+          ai_summary?: string | null
+          borrower_file_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          match_count?: number | null
+          nickname?: string | null
+          scenario?: Json
+          top_lender?: string | null
+          top_product?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_searches_borrower_file_id_fkey"
+            columns: ["borrower_file_id"]
+            isOneToOne: false
+            referencedRelation: "borrower_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       overlays: {
         Row: {
           created_at: string
@@ -359,6 +629,78 @@ export type Database = {
             columns: ["lender_id"]
             isOneToOne: false
             referencedRelation: "lenders_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      statement_transactions: {
+        Row: {
+          balance: number | null
+          bank_statement_id: string
+          classification: string
+          confidence: number | null
+          created_at: string
+          created_by: string
+          deposit_amount: number | null
+          description: string | null
+          id: string
+          included_in_income: boolean
+          income_analysis_id: string
+          manual_override: boolean
+          notes: string | null
+          reason: string | null
+          txn_date: string | null
+          withdrawal_amount: number | null
+        }
+        Insert: {
+          balance?: number | null
+          bank_statement_id: string
+          classification?: string
+          confidence?: number | null
+          created_at?: string
+          created_by: string
+          deposit_amount?: number | null
+          description?: string | null
+          id?: string
+          included_in_income?: boolean
+          income_analysis_id: string
+          manual_override?: boolean
+          notes?: string | null
+          reason?: string | null
+          txn_date?: string | null
+          withdrawal_amount?: number | null
+        }
+        Update: {
+          balance?: number | null
+          bank_statement_id?: string
+          classification?: string
+          confidence?: number | null
+          created_at?: string
+          created_by?: string
+          deposit_amount?: number | null
+          description?: string | null
+          id?: string
+          included_in_income?: boolean
+          income_analysis_id?: string
+          manual_override?: boolean
+          notes?: string | null
+          reason?: string | null
+          txn_date?: string | null
+          withdrawal_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statement_transactions_bank_statement_id_fkey"
+            columns: ["bank_statement_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "statement_transactions_income_analysis_id_fkey"
+            columns: ["income_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "income_analyses"
             referencedColumns: ["id"]
           },
         ]
