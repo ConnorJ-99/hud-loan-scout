@@ -260,6 +260,20 @@ function AnalysisDetail() {
           <Field label="Borrower Name">
             <input className={inputCls} value={a.borrower_name} onChange={(e) => setA({ ...a, borrower_name: e.target.value })} />
           </Field>
+          <Field label="Linked Borrower File">
+            <select
+              className={inputCls}
+              value={a.borrower_file_id ?? ""}
+              onChange={(e) => {
+                const bid = e.target.value || null;
+                const match = borrowers.find((b) => b.id === bid);
+                setA({ ...a, borrower_file_id: bid, borrower_name: match?.borrower_name ?? a.borrower_name });
+              }}
+            >
+              <option value="">— None —</option>
+              {borrowers.map((b) => <option key={b.id} value={b.id}>{b.borrower_name}</option>)}
+            </select>
+          </Field>
           <Field label="Analysis Type">
             <select className={inputCls} value={a.analysis_type} onChange={(e) => setA({ ...a, analysis_type: e.target.value as AnalysisType })}>
               <option>12-month bank statement</option>
