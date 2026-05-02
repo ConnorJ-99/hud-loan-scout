@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/loaniq/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth/useAuth";
-import { Plus, Calculator, Loader2 } from "lucide-react";
+import { Plus, Calculator, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/income-analyzer/")({
@@ -59,6 +59,19 @@ function IncomeAnalyzerList() {
     navigate({ to: "/income-analyzer/$id" as never, params: { id: data.id } as never });
   }
 
+  async function deleteAnalysis(e: React.MouseEvent, row: Row) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Delete analysis for "${row.borrower_name}"? This will also delete its statements and transactions.`)) return;
+    // Delete child rows first (no cascade FK in schema)
+    await supabase.from("statement_transactions").delete().eq("income_analysis_id", row.id);
+    await supabase.from("bank_statements").delete().eq("income_analysis_id", row.id);
+    const { error } = await supabase.from("income_analyses").delete().eq("id", row.id);
+    if (error) return toast.error(error.message);
+    setRows((prev) => prev.filter((r) => r.id !== row.id));
+    toast.success("Analysis deleted");
+  }
+
   return (
     <div>
       <PageHeader
@@ -105,6 +118,7 @@ function IncomeAnalyzerList() {
                   <th className="text-right px-4 py-2.5 text-hud text-[10px] text-muted-foreground">QUAL INCOME</th>
                   <th className="text-left px-4 py-2.5 text-hud text-[10px] text-muted-foreground">STATUS</th>
                   <th className="text-left px-4 py-2.5 text-hud text-[10px] text-muted-foreground">UPDATED</th>
+                  <th className="px-4 py-2.5"></th>
                 </tr>
               </thead>
               <tbody>
@@ -130,6 +144,15 @@ function IncomeAnalyzerList() {
                     </td>
                     <td className="px-4 py-2.5 text-mono text-[10px] text-muted-foreground">
                       {new Date(r.updated_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        onClick={(e) => deleteAnalysis(e, r)}
+                        className="text-muted-foreground hover:text-destructive transition"
+                        title="Delete analysis"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
