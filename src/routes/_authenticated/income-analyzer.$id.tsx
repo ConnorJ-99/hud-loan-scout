@@ -432,6 +432,12 @@ function AnalysisDetail() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-hud text-xs text-cyan">TRANSACTIONS ({txns.length})</span>
             <div className="flex items-center gap-2">
+              <button onClick={() => setIncludedAll(true)} disabled={txns.length === 0} className="text-hud text-[10px] text-success border border-success/40 rounded-sm px-2 py-1 hover:bg-success/10 disabled:opacity-40">
+                INCLUDE ALL
+              </button>
+              <button onClick={() => setIncludedAll(false)} disabled={txns.length === 0} className="text-hud text-[10px] text-muted-foreground border border-border rounded-sm px-2 py-1 hover:text-destructive hover:border-destructive/60 disabled:opacity-40">
+                EXCLUDE ALL
+              </button>
               <button onClick={addTxn} className="text-hud text-[10px] text-muted-foreground border border-border rounded-sm px-2 py-1 hover:text-cyan hover:border-cyan/60">+ ADD</button>
               <button onClick={calculate} className="flex items-center gap-1.5 rounded-sm border border-success/60 bg-success/10 px-3 py-1 text-hud text-[10px] text-success hover:bg-success/20">
                 <Calculator className="h-3 w-3" /> CALCULATE INCOME
