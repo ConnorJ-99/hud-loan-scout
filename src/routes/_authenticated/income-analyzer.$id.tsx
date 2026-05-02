@@ -347,11 +347,16 @@ function AnalysisDetail() {
           </Field>
           <Field label="Expense Factor">
             <select className={inputCls} value={String(a.expense_factor)} onChange={(e) => setA({ ...a, expense_factor: Number(e.target.value) })}>
-              <option value="0.5">50%</option>
-              <option value="0.6">60%</option>
-              <option value="0.7">70%</option>
-              <option value="1">100% (custom)</option>
+              <option value="0.9">10% expenses (90%)</option>
+              <option value="0.75">25% expenses (75%)</option>
+              <option value="0.5">50% expenses (50%)</option>
+              <option value="0.4">60% expenses (40%)</option>
+              <option value="0.3">70% expenses (30%)</option>
+              <option value="1">100% (no haircut)</option>
             </select>
+          </Field>
+          <Field label="Large Deposit Threshold">
+            <input type="number" className={inputCls} value={a.large_deposit_threshold ?? 5000} onChange={(e) => setA({ ...a, large_deposit_threshold: Number(e.target.value) })} />
           </Field>
         </section>
 
