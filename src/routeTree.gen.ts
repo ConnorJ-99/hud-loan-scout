@@ -16,9 +16,9 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedLoanSearchRouteImport } from './routes/_authenticated/loan-search'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
-import { Route as AuthenticatedIncomeAnalyzerRouteImport } from './routes/_authenticated/income-analyzer'
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
 import { Route as AuthenticatedBorrowersRouteImport } from './routes/_authenticated/borrowers'
+import { Route as AuthenticatedIncomeAnalyzerIndexRouteImport } from './routes/_authenticated/income-analyzer.index'
 import { Route as AuthenticatedIncomeAnalyzerIdRouteImport } from './routes/_authenticated/income-analyzer.$id'
 import { Route as AuthenticatedBorrowersIdRouteImport } from './routes/_authenticated/borrowers.$id'
 
@@ -56,12 +56,6 @@ const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
   path: '/knowledge',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedIncomeAnalyzerRoute =
-  AuthenticatedIncomeAnalyzerRouteImport.update({
-    id: '/income-analyzer',
-    path: '/income-analyzer',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
@@ -72,11 +66,17 @@ const AuthenticatedBorrowersRoute = AuthenticatedBorrowersRouteImport.update({
   path: '/borrowers',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedIncomeAnalyzerIndexRoute =
+  AuthenticatedIncomeAnalyzerIndexRouteImport.update({
+    id: '/income-analyzer/',
+    path: '/income-analyzer/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIncomeAnalyzerIdRoute =
   AuthenticatedIncomeAnalyzerIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedIncomeAnalyzerRoute,
+    id: '/income-analyzer/$id',
+    path: '/income-analyzer/$id',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedBorrowersIdRoute =
   AuthenticatedBorrowersIdRouteImport.update({
@@ -90,19 +90,18 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/borrowers': typeof AuthenticatedBorrowersRouteWithChildren
   '/catalog': typeof AuthenticatedCatalogRoute
-  '/income-analyzer': typeof AuthenticatedIncomeAnalyzerRouteWithChildren
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/loan-search': typeof AuthenticatedLoanSearchRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
   '/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
+  '/income-analyzer/': typeof AuthenticatedIncomeAnalyzerIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/borrowers': typeof AuthenticatedBorrowersRouteWithChildren
   '/catalog': typeof AuthenticatedCatalogRoute
-  '/income-analyzer': typeof AuthenticatedIncomeAnalyzerRouteWithChildren
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/loan-search': typeof AuthenticatedLoanSearchRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -110,6 +109,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
   '/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
+  '/income-analyzer': typeof AuthenticatedIncomeAnalyzerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,7 +117,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/borrowers': typeof AuthenticatedBorrowersRouteWithChildren
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
-  '/_authenticated/income-analyzer': typeof AuthenticatedIncomeAnalyzerRouteWithChildren
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/loan-search': typeof AuthenticatedLoanSearchRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -125,6 +124,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
   '/_authenticated/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
+  '/_authenticated/income-analyzer/': typeof AuthenticatedIncomeAnalyzerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,19 +133,18 @@ export interface FileRouteTypes {
     | '/auth'
     | '/borrowers'
     | '/catalog'
-    | '/income-analyzer'
     | '/knowledge'
     | '/loan-search'
     | '/reports'
     | '/settings'
     | '/borrowers/$id'
     | '/income-analyzer/$id'
+    | '/income-analyzer/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/borrowers'
     | '/catalog'
-    | '/income-analyzer'
     | '/knowledge'
     | '/loan-search'
     | '/reports'
@@ -153,13 +152,13 @@ export interface FileRouteTypes {
     | '/'
     | '/borrowers/$id'
     | '/income-analyzer/$id'
+    | '/income-analyzer'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/borrowers'
     | '/_authenticated/catalog'
-    | '/_authenticated/income-analyzer'
     | '/_authenticated/knowledge'
     | '/_authenticated/loan-search'
     | '/_authenticated/reports'
@@ -167,6 +166,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/borrowers/$id'
     | '/_authenticated/income-analyzer/$id'
+    | '/_authenticated/income-analyzer/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/income-analyzer': {
-      id: '/_authenticated/income-analyzer'
-      path: '/income-analyzer'
-      fullPath: '/income-analyzer'
-      preLoaderRoute: typeof AuthenticatedIncomeAnalyzerRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/catalog': {
       id: '/_authenticated/catalog'
       path: '/catalog'
@@ -246,12 +239,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBorrowersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/income-analyzer/': {
+      id: '/_authenticated/income-analyzer/'
+      path: '/income-analyzer'
+      fullPath: '/income-analyzer/'
+      preLoaderRoute: typeof AuthenticatedIncomeAnalyzerIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/income-analyzer/$id': {
       id: '/_authenticated/income-analyzer/$id'
-      path: '/$id'
+      path: '/income-analyzer/$id'
       fullPath: '/income-analyzer/$id'
       preLoaderRoute: typeof AuthenticatedIncomeAnalyzerIdRouteImport
-      parentRoute: typeof AuthenticatedIncomeAnalyzerRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/borrowers/$id': {
       id: '/_authenticated/borrowers/$id'
@@ -277,41 +277,28 @@ const AuthenticatedBorrowersRouteWithChildren =
     AuthenticatedBorrowersRouteChildren,
   )
 
-interface AuthenticatedIncomeAnalyzerRouteChildren {
-  AuthenticatedIncomeAnalyzerIdRoute: typeof AuthenticatedIncomeAnalyzerIdRoute
-}
-
-const AuthenticatedIncomeAnalyzerRouteChildren: AuthenticatedIncomeAnalyzerRouteChildren =
-  {
-    AuthenticatedIncomeAnalyzerIdRoute: AuthenticatedIncomeAnalyzerIdRoute,
-  }
-
-const AuthenticatedIncomeAnalyzerRouteWithChildren =
-  AuthenticatedIncomeAnalyzerRoute._addFileChildren(
-    AuthenticatedIncomeAnalyzerRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedBorrowersRoute: typeof AuthenticatedBorrowersRouteWithChildren
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
-  AuthenticatedIncomeAnalyzerRoute: typeof AuthenticatedIncomeAnalyzerRouteWithChildren
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedLoanSearchRoute: typeof AuthenticatedLoanSearchRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedIncomeAnalyzerIdRoute: typeof AuthenticatedIncomeAnalyzerIdRoute
+  AuthenticatedIncomeAnalyzerIndexRoute: typeof AuthenticatedIncomeAnalyzerIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBorrowersRoute: AuthenticatedBorrowersRouteWithChildren,
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
-  AuthenticatedIncomeAnalyzerRoute:
-    AuthenticatedIncomeAnalyzerRouteWithChildren,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedLoanSearchRoute: AuthenticatedLoanSearchRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedIncomeAnalyzerIdRoute: AuthenticatedIncomeAnalyzerIdRoute,
+  AuthenticatedIncomeAnalyzerIndexRoute: AuthenticatedIncomeAnalyzerIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
