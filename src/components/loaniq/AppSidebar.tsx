@@ -15,19 +15,21 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+
+const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/loan-search", label: "Loan Search", icon: Search },
   { to: "/income-analyzer", label: "Income Analyzer", icon: Calculator },
   { to: "/borrowers", label: "Borrower Files", icon: Users },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
-] as const;
+];
 
-const ADMIN_NAV = [
+const ADMIN_NAV: NavItem[] = [
   { to: "/catalog", label: "Lender Catalog", icon: Database },
   { to: "/knowledge", label: "Knowledge", icon: Brain },
-] as const;
+];
 
 export function AppSidebar() {
   const loc = useLocation();
