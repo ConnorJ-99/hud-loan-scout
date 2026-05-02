@@ -39,6 +39,7 @@ interface Statement {
   period_start: string | null;
   period_end: string | null;
   parse_status: string;
+  file_path: string | null;
 }
 
 interface Txn {
