@@ -177,7 +177,9 @@ function AnalysisDetail() {
     for (const s of newIds) {
       await parseStatementById(s.id, s.name);
     }
-    load();
+    await load();
+    // Auto-calculate after parsing finishes
+    await calculateFromDb();
   }
 
   async function parseStatement(stmt: Statement) {
@@ -200,7 +202,8 @@ function AnalysisDetail() {
     for (const s of targets) {
       await parseStatementById(s.id, s.file_name);
     }
-    load();
+    await load();
+    await calculateFromDb();
   }
 
   async function deleteStatement(stmtId: string) {
