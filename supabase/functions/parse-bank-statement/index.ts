@@ -78,23 +78,34 @@ serve(async (req) => {
 
     await admin.from("bank_statements").update({ parse_status: "parsing", parse_error: null }).eq("id", statementId);
 
-    // 1. Download PDF
-    const { data: fileBlob, error: dlErr } = await admin.storage
-      .from("bank-statements")
-      .download(stmt.file_path);
-    if (dlErr || !fileBlob) {
+    // 1. Download PDF via signed URL (more reliable than SDK .download() for larger files)
+    let pdfBytes: Uint8Array | null = null;
+    try {
+      const { data: signed, error: signErr } = await admin.storage
+        .from("bank-statements")
+        .createSignedUrl(stmt.file_path, 120);
+      if (signErr || !signed?.signedUrl) {
+        throw new Error(signErr?.message ?? "could not create signed url");
+      }
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 90_000);
+      const res = await fetch(signed.signedUrl, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error(`storage fetch ${res.status}`);
+      pdfBytes = new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "download failed";
       await admin.from("bank_statements").update({
         parse_status: "failed",
-        parse_error: dlErr?.message ?? "download failed",
+        parse_error: msg,
       }).eq("id", statementId);
-      return json({ error: "Download failed: " + dlErr?.message }, 500);
+      return json({ error: "Download failed: " + msg }, 500);
     }
 
     // 2. Extract text with unpdf
     let pdfText = "";
     try {
-      const ab = await fileBlob.arrayBuffer();
-      const pdf = await getDocumentProxy(new Uint8Array(ab));
+      const pdf = await getDocumentProxy(pdfBytes);
       const { text } = await extractText(pdf, { mergePages: true });
       pdfText = Array.isArray(text) ? text.join("\n") : (text ?? "");
     } catch (e) {
