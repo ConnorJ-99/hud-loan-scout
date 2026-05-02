@@ -1,37 +1,39 @@
 // Edge function: parse-bank-statement
-// Reads a PDF from the `bank-statements` private bucket, sends to Lovable AI
-// (google/gemini-2.5-pro) with vision, extracts structured statement data
-// + classified deposit transactions, persists rows in bank_statements +
-// statement_transactions, and returns a summary.
+// 1. Downloads the PDF from the `bank-statements` private bucket.
+// 2. Extracts text with unpdf (no native deps, Deno-compatible).
+// 3. Sends the text to Lovable AI (google/gemini-2.5-pro) with a tool schema
+//    asking for structured statement metadata + classified deposits.
+// 4. Persists rows in bank_statements + statement_transactions.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM = `You are an expert mortgage underwriter classifying bank statement deposits for income qualification.
+const SYSTEM = `You are a senior mortgage underwriter classifying bank-statement deposits for income qualification.
 
-You will receive a bank statement PDF. Extract:
-1. Bank name, account holder, last 4 of account, statement period (start/end dates).
-2. EVERY deposit (credit) transaction. Skip withdrawals/debits.
+You will receive the raw text extracted from a bank statement PDF. Your job:
 
-For each deposit, classify it:
-- "Business revenue": ACH from clients/customers, merchant deposits (Square, Stripe, PayPal Business), invoice payments. INCLUDE in income.
-- "Payroll / W-2 income": direct deposit from employer, payroll companies (ADP, Gusto). INCLUDE in income.
-- "Transfers": between own accounts, "TRANSFER FROM", internal moves. EXCLUDE.
-- "Refunds": returns, reversals, refund credits. EXCLUDE.
-- "Zelle / Venmo / Cash App": peer-to-peer apps unless clearly business. EXCLUDE by default.
-- "Loan proceeds": loan disbursements, line of credit advances, cash advances. EXCLUDE.
-- "Non-recurring deposits": one-time large gifts, tax refunds, insurance settlements. EXCLUDE.
-- "Duplicate deposits": same amount + same day appearing twice. EXCLUDE the duplicate.
-- "Unclear / needs review": cannot determine. EXCLUDE, flag for review.
+1. Extract statement metadata: bank_name, account_holder, account_last4, period_start (YYYY-MM-DD), period_end (YYYY-MM-DD), beginning_balance, ending_balance.
+2. Extract EVERY deposit / credit transaction. Skip withdrawals, debits, fees, checks paid.
+3. Classify each deposit using these categories (case-sensitive):
+   - "Business revenue"           -> ACH from clients/customers, merchant deposits (Square, Stripe, PayPal Business), invoice payments. INCLUDE.
+   - "Payroll / W-2 income"       -> direct deposit from employer, ADP, Gusto, payroll co. INCLUDE.
+   - "Transfers"                  -> "Transfer from", internal moves, between own accounts. EXCLUDE.
+   - "Refunds"                    -> returns, reversals, refund credits. EXCLUDE.
+   - "Zelle / Venmo / Cash App"   -> P2P apps unless clearly business. EXCLUDE by default.
+   - "Loan proceeds"              -> loan disbursements, LOC advances, cash advances. EXCLUDE.
+   - "Non-recurring deposits"     -> one-time gifts, tax refunds, insurance settlements, large one-off deposits. EXCLUDE.
+   - "Duplicate deposits"         -> same amount + same day twice. EXCLUDE the duplicate.
+   - "Unclear / needs review"     -> cannot determine. EXCLUDE, flag for review.
 
-Be conservative. If unclear, mark "Unclear / needs review" and exclude.
+Be conservative: if unclear, mark "Unclear / needs review" and exclude.
 
-Use the extract_statement tool. Return ALL deposits, no truncation.`;
+Always call the extract_statement tool. Return ALL deposits, no truncation, with reason + confidence (0-1).`;
 
 interface ToolDeposit {
   txn_date: string | null;
@@ -57,9 +59,7 @@ serve(async (req) => {
       global: { headers: { Authorization: auth } },
     });
     const { data: userData } = await userClient.auth.getUser();
-    if (!userData.user) {
-      return json({ error: "Not authenticated" }, 401);
-    }
+    if (!userData.user) return json({ error: "Not authenticated" }, 401);
     const userId = userData.user.id;
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
@@ -67,7 +67,6 @@ serve(async (req) => {
     const { statementId } = await req.json();
     if (!statementId) return json({ error: "statementId required" }, 400);
 
-    // Fetch statement row (must belong to caller)
     const { data: stmt, error: stmtErr } = await admin
       .from("bank_statements")
       .select("*")
@@ -79,16 +78,42 @@ serve(async (req) => {
 
     await admin.from("bank_statements").update({ parse_status: "parsing", parse_error: null }).eq("id", statementId);
 
-    // Download PDF
-    const { data: fileBlob, error: dlErr } = await admin.storage.from("bank-statements").download(stmt.file_path);
+    // 1. Download PDF
+    const { data: fileBlob, error: dlErr } = await admin.storage
+      .from("bank-statements")
+      .download(stmt.file_path);
     if (dlErr || !fileBlob) {
-      await admin.from("bank_statements").update({ parse_status: "failed", parse_error: dlErr?.message ?? "download failed" }).eq("id", statementId);
+      await admin.from("bank_statements").update({
+        parse_status: "failed",
+        parse_error: dlErr?.message ?? "download failed",
+      }).eq("id", statementId);
       return json({ error: "Download failed: " + dlErr?.message }, 500);
     }
 
-    const ab = await fileBlob.arrayBuffer();
-    const base64 = encodeBase64(new Uint8Array(ab));
+    // 2. Extract text with unpdf
+    let pdfText = "";
+    try {
+      const ab = await fileBlob.arrayBuffer();
+      const pdf = await getDocumentProxy(new Uint8Array(ab));
+      const { text } = await extractText(pdf, { mergePages: true });
+      pdfText = Array.isArray(text) ? text.join("\n") : (text ?? "");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "PDF extract failed";
+      await admin.from("bank_statements").update({ parse_status: "failed", parse_error: msg }).eq("id", statementId);
+      return json({ error: "PDF extract failed: " + msg }, 500);
+    }
 
+    if (!pdfText || pdfText.trim().length < 50) {
+      const msg = "PDF appears to be image-only / scanned. OCR not yet supported.";
+      await admin.from("bank_statements").update({ parse_status: "failed", parse_error: msg }).eq("id", statementId);
+      return json({ error: msg }, 422);
+    }
+
+    // Truncate very large statements to keep within model limits (~120k chars ≈ 30k tokens)
+    const MAX_CHARS = 120_000;
+    if (pdfText.length > MAX_CHARS) pdfText = pdfText.slice(0, MAX_CHARS);
+
+    // 3. Call Lovable AI with tool schema
     const tool = {
       type: "function",
       function: {
@@ -102,6 +127,8 @@ serve(async (req) => {
             account_last4: { type: "string" },
             period_start: { type: "string", description: "YYYY-MM-DD" },
             period_end: { type: "string", description: "YYYY-MM-DD" },
+            beginning_balance: { type: "number" },
+            ending_balance: { type: "number" },
             deposits: {
               type: "array",
               items: {
@@ -110,11 +137,20 @@ serve(async (req) => {
                   txn_date: { type: "string", description: "YYYY-MM-DD" },
                   description: { type: "string" },
                   deposit_amount: { type: "number" },
-                  classification: { type: "string", enum: [
-                    "Business revenue", "Payroll / W-2 income", "Transfers", "Refunds",
-                    "Zelle / Venmo / Cash App", "Loan proceeds", "Non-recurring deposits",
-                    "Duplicate deposits", "Unclear / needs review",
-                  ] },
+                  classification: {
+                    type: "string",
+                    enum: [
+                      "Business revenue",
+                      "Payroll / W-2 income",
+                      "Transfers",
+                      "Refunds",
+                      "Zelle / Venmo / Cash App",
+                      "Loan proceeds",
+                      "Non-recurring deposits",
+                      "Duplicate deposits",
+                      "Unclear / needs review",
+                    ],
+                  },
                   included_in_income: { type: "boolean" },
                   reason: { type: "string" },
                   confidence: { type: "number" },
@@ -140,10 +176,10 @@ serve(async (req) => {
           { role: "system", content: SYSTEM },
           {
             role: "user",
-            content: [
-              { type: "text", text: "Extract every deposit from this bank statement and classify each one. Use the extract_statement tool." },
-              { type: "image_url", image_url: { url: `data:application/pdf;base64,${base64}` } },
-            ],
+            content:
+              "Here is the raw text of a bank statement PDF. Extract the metadata and every deposit, classify each, and call the extract_statement tool.\n\n----- BEGIN STATEMENT TEXT -----\n" +
+              pdfText +
+              "\n----- END STATEMENT TEXT -----",
           },
         ],
         tools: [tool],
@@ -153,15 +189,24 @@ serve(async (req) => {
 
     if (!aiRes.ok) {
       const text = await aiRes.text();
-      const status = aiRes.status === 429 ? "Rate limit hit" : aiRes.status === 402 ? "AI credits exhausted" : "AI error";
-      await admin.from("bank_statements").update({ parse_status: "failed", parse_error: `${status}: ${text.slice(0, 200)}` }).eq("id", statementId);
+      const status =
+        aiRes.status === 429 ? "Rate limit hit"
+          : aiRes.status === 402 ? "AI credits exhausted"
+          : "AI error";
+      await admin.from("bank_statements").update({
+        parse_status: "failed",
+        parse_error: `${status}: ${text.slice(0, 200)}`,
+      }).eq("id", statementId);
       return json({ error: status, details: text.slice(0, 500) }, 500);
     }
 
     const aiJson = await aiRes.json();
     const call = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
     if (!call?.function?.arguments) {
-      await admin.from("bank_statements").update({ parse_status: "failed", parse_error: "No tool call returned" }).eq("id", statementId);
+      await admin.from("bank_statements").update({
+        parse_status: "failed",
+        parse_error: "No tool call returned",
+      }).eq("id", statementId);
       return json({ error: "AI returned no tool call" }, 500);
     }
 
@@ -176,11 +221,14 @@ serve(async (req) => {
     try {
       parsed = JSON.parse(call.function.arguments);
     } catch {
-      await admin.from("bank_statements").update({ parse_status: "failed", parse_error: "Invalid tool args JSON" }).eq("id", statementId);
+      await admin.from("bank_statements").update({
+        parse_status: "failed",
+        parse_error: "Invalid tool args JSON",
+      }).eq("id", statementId);
       return json({ error: "Invalid JSON from AI" }, 500);
     }
 
-    // Update statement row with metadata
+    // 4. Update statement metadata
     await admin.from("bank_statements").update({
       bank_name: parsed.bank_name ?? null,
       account_holder: parsed.account_holder ?? null,
@@ -194,24 +242,29 @@ serve(async (req) => {
     // Replace existing transactions for this statement (re-parse safe)
     await admin.from("statement_transactions").delete().eq("bank_statement_id", statementId);
 
-    const rows = (parsed.deposits ?? []).filter((d) => Number(d.deposit_amount) > 0).map((d) => ({
-      created_by: userId,
-      income_analysis_id: stmt.income_analysis_id,
-      bank_statement_id: statementId,
-      txn_date: validDate(d.txn_date),
-      description: d.description ?? "",
-      deposit_amount: Number(d.deposit_amount) || 0,
-      classification: d.classification,
-      included_in_income: !!d.included_in_income,
-      reason: d.reason ?? null,
-      confidence: typeof d.confidence === "number" ? d.confidence : null,
-      manual_override: false,
-    }));
+    const rows = (parsed.deposits ?? [])
+      .filter((d) => Number(d.deposit_amount) > 0)
+      .map((d) => ({
+        created_by: userId,
+        income_analysis_id: stmt.income_analysis_id,
+        bank_statement_id: statementId,
+        txn_date: validDate(d.txn_date),
+        description: d.description ?? "",
+        deposit_amount: Number(d.deposit_amount) || 0,
+        classification: d.classification,
+        included_in_income: !!d.included_in_income,
+        reason: d.reason ?? null,
+        confidence: typeof d.confidence === "number" ? d.confidence : null,
+        manual_override: false,
+      }));
 
     if (rows.length > 0) {
       const { error: insErr } = await admin.from("statement_transactions").insert(rows);
       if (insErr) {
-        await admin.from("bank_statements").update({ parse_status: "failed", parse_error: insErr.message }).eq("id", statementId);
+        await admin.from("bank_statements").update({
+          parse_status: "failed",
+          parse_error: insErr.message,
+        }).eq("id", statementId);
         return json({ error: insErr.message }, 500);
       }
     }
@@ -240,16 +293,5 @@ function json(body: unknown, status = 200) {
 
 function validDate(d: string | null | undefined): string | null {
   if (!d) return null;
-  const m = /^\d{4}-\d{2}-\d{2}$/.test(d);
-  return m ? d : null;
-}
-
-function encodeBase64(bytes: Uint8Array): string {
-  // Chunked to avoid call-stack issues on large PDFs
-  let s = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    s += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(s);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
 }
