@@ -145,7 +145,20 @@ function AnalysisDetail() {
       toast.error("No file path");
       return;
     }
-    toast.info("AI parsing not yet wired in this build — manual entry / classification works.");
+    // Mark UI as parsing immediately
+    setStatements((prev) => prev.map((s) => s.id === stmt.id ? { ...s, parse_status: "parsing" } : s));
+    toast.info(`Parsing ${stmt.file_name}…`);
+    const { data, error } = await supabase.functions.invoke("parse-bank-statement", {
+      body: { statementId: stmt.id },
+    });
+    if (error || data?.error) {
+      const msg = data?.error ?? error?.message ?? "Parse failed";
+      toast.error(`Parse failed: ${msg}`);
+      load();
+      return;
+    }
+    toast.success(`Parsed ${data.deposits_extracted} deposits (${data.deposits_included} included)`);
+    load();
   }
 
   async function deleteStatement(stmtId: string) {
