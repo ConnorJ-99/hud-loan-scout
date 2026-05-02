@@ -112,6 +112,7 @@ function AnalysisDetail() {
       .from("income_analyses")
       .update({
         borrower_name: a.borrower_name,
+        borrower_file_id: a.borrower_file_id,
         analysis_type: a.analysis_type,
         statement_period_start: a.statement_period_start,
         statement_period_end: a.statement_period_end,
