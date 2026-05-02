@@ -465,6 +465,35 @@ function AnalysisDetail() {
           )}
         </section>
 
+        {/* Monthly Breakdown */}
+        {monthly.length > 0 && (
+          <section className="hud-panel rounded-md p-4">
+            <span className="text-hud text-xs text-cyan">MONTHLY BREAKDOWN</span>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-1.5 text-hud text-[9px] text-muted-foreground">MONTH</th>
+                    <th className="text-right py-1.5 text-hud text-[9px] text-muted-foreground">TOTAL DEPOSITS</th>
+                    <th className="text-right py-1.5 text-hud text-[9px] text-muted-foreground">EXCLUDED</th>
+                    <th className="text-right py-1.5 text-hud text-[9px] text-muted-foreground">QUALIFYING</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthly.map(([month, m]) => (
+                    <tr key={month} className="border-b border-border last:border-b-0">
+                      <td className="py-1 text-mono">{month}</td>
+                      <td className="py-1 text-right text-mono">${m.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td className="py-1 text-right text-mono text-muted-foreground">${m.excluded.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td className="py-1 text-right text-mono text-success">${m.qualifying.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {/* Results */}
         <section className="hud-panel rounded-md p-4">
           <span className="text-hud text-xs text-cyan">QUALIFYING INCOME REPORT</span>
