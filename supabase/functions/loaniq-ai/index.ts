@@ -357,7 +357,7 @@ serve(async (req) => {
 
     const isAnalyze = mode === "analyze" || mode === "extract";
     const requestBody: Record<string, unknown> = {
-      model: isAnalyze ? "openai/gpt-5" : "google/gemini-3-flash-preview",
+      model: isAnalyze ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview",
       messages: apiMessages,
     };
     if (responseFormat) requestBody.response_format = responseFormat;
