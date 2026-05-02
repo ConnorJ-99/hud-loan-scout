@@ -367,11 +367,18 @@ function AnalysisDetail() {
               <FileText className="h-4 w-4 text-cyan" />
               <span className="text-hud text-xs text-cyan">BANK STATEMENTS</span>
             </div>
-            <label className={`flex items-center gap-2 rounded-sm border border-cyan bg-cyan/10 px-3 py-1.5 text-hud text-xs text-cyan hover:bg-cyan/20 transition cursor-pointer ${uploading ? "opacity-50" : ""}`}>
-              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} UPLOAD PDFS
-              <input type="file" accept="application/pdf" multiple className="hidden" disabled={uploading}
-                onChange={(e) => e.target.files && uploadFiles(e.target.files)} />
-            </label>
+            <div className="flex items-center gap-2">
+              {statements.some((s) => s.parse_status !== "parsed") && (
+                <button onClick={parseAllUnparsed} className="text-hud text-[10px] text-cyan border border-cyan/40 rounded-sm px-2 py-1 hover:bg-cyan/10">
+                  PARSE ALL
+                </button>
+              )}
+              <label className={`flex items-center gap-2 rounded-sm border border-cyan bg-cyan/10 px-3 py-1.5 text-hud text-xs text-cyan hover:bg-cyan/20 transition cursor-pointer ${uploading ? "opacity-50" : ""}`}>
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} UPLOAD PDFS
+                <input type="file" accept="application/pdf" multiple className="hidden" disabled={uploading}
+                  onChange={(e) => e.target.files && uploadFiles(e.target.files)} />
+              </label>
+            </div>
           </div>
           {statements.length === 0 ? (
             <p className="text-mono text-xs text-muted-foreground py-4 text-center">&gt; No statements uploaded yet.</p>
