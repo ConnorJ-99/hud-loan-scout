@@ -114,6 +114,55 @@ function BorrowerDetail() {
           <div className="text-hud text-[10px] text-muted-foreground mb-1">NOTES</div>
           <textarea rows={5} className={inputCls} value={b.notes ?? ""} onChange={(e) => setB({ ...b, notes: e.target.value })} />
         </section>
+
+        <section className="hud-panel rounded-md p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="h-4 w-4 text-cyan" />
+            <span className="text-hud text-xs text-cyan">LINKED INCOME ANALYSES ({analyses.length})</span>
+          </div>
+          {analyses.length === 0 ? (
+            <p className="text-mono text-xs text-muted-foreground py-3 text-center">&gt; No analyses linked. Open Income Analyzer and link this borrower file.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {analyses.map((a) => (
+                <Link key={a.id} to={"/income-analyzer/$id" as never} params={{ id: a.id } as never}
+                  className="flex items-center justify-between rounded-sm border border-border bg-background/40 p-2.5 hover:border-cyan/60 transition">
+                  <div className="min-w-0">
+                    <div className="text-sm truncate">{a.analysis_type}</div>
+                    <div className="text-mono text-[10px] text-muted-foreground">
+                      {a.status}{a.qualifying_monthly_income ? ` · $${Number(a.qualifying_monthly_income).toLocaleString()}/mo` : ""}
+                    </div>
+                  </div>
+                  <div className="text-mono text-[10px] text-muted-foreground">{new Date(a.updated_at).toLocaleDateString()}</div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="hud-panel rounded-md p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Search className="h-4 w-4 text-cyan" />
+            <span className="text-hud text-xs text-cyan">LINKED LOAN SEARCHES ({searches.length})</span>
+          </div>
+          {searches.length === 0 ? (
+            <p className="text-mono text-xs text-muted-foreground py-3 text-center">&gt; No loan searches linked.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {searches.map((s) => (
+                <div key={s.id} className="flex items-center justify-between rounded-sm border border-border bg-background/40 p-2.5">
+                  <div className="min-w-0">
+                    <div className="text-sm truncate">{s.nickname || "Scenario"}</div>
+                    <div className="text-mono text-[10px] text-muted-foreground truncate">
+                      {s.top_lender ? `${s.top_lender} — ${s.top_product}` : "No top match"} · {s.match_count ?? 0} matches
+                    </div>
+                  </div>
+                  <div className="text-mono text-[10px] text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
