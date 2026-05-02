@@ -177,7 +177,9 @@ function AnalysisDetail() {
     for (const s of newIds) {
       await parseStatementById(s.id, s.name);
     }
-    load();
+    await load();
+    // Auto-calculate after parsing finishes
+    await calculateFromDb();
   }
 
   async function parseStatement(stmt: Statement) {
@@ -200,7 +202,8 @@ function AnalysisDetail() {
     for (const s of targets) {
       await parseStatementById(s.id, s.file_name);
     }
-    load();
+    await load();
+    await calculateFromDb();
   }
 
   async function deleteStatement(stmtId: string) {
@@ -244,13 +247,21 @@ function AnalysisDetail() {
     setTxns((prev) => prev.filter((t) => t.id !== txnId));
   }
 
-  async function calculate() {
+  async function calculateFromDb() {
     if (!a) return;
-    const totalDeposits = txns.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
-    const qualifying = txns.filter((t) => t.included_in_income).reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
+    // Read fresh transactions + statements straight from the DB so we don't
+    // race React state after auto-parse.
+    const [tRes, sRes] = await Promise.all([
+      supabase.from("statement_transactions").select("deposit_amount, included_in_income").eq("income_analysis_id", id),
+      supabase.from("bank_statements").select("parse_status").eq("income_analysis_id", id),
+    ]);
+    const freshTxns = (tRes.data ?? []) as { deposit_amount: number | null; included_in_income: boolean }[];
+    const freshStmts = (sRes.data ?? []) as { parse_status: string }[];
+
+    const totalDeposits = freshTxns.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
+    const qualifying = freshTxns.filter((t) => t.included_in_income).reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
     const excluded = totalDeposits - qualifying;
-    // Prefer count of parsed statements, else fall back to analysis_type
-    const parsedCount = statements.filter((s) => s.parse_status === "parsed").length;
+    const parsedCount = freshStmts.filter((s) => s.parse_status === "parsed").length;
     const fallback = a.analysis_type.startsWith("24") ? 24 : 12;
     const months = parsedCount > 0 ? parsedCount : (a.months_reviewed ?? fallback);
     const avg = months > 0 ? qualifying / months : 0;
@@ -266,8 +277,22 @@ function AnalysisDetail() {
       status: "calculated",
     }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Income calculated");
+    toast.success(`Income calculated: $${qualMonthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo`);
     load();
+  }
+
+  const calculate = calculateFromDb;
+
+  async function setIncludedAll(included: boolean) {
+    if (txns.length === 0) return;
+    const ids = txns.map((t) => t.id);
+    const { error } = await supabase
+      .from("statement_transactions")
+      .update({ included_in_income: included, manual_override: true })
+      .in("id", ids);
+    if (error) return toast.error(error.message);
+    setTxns((prev) => prev.map((t) => ({ ...t, included_in_income: included, manual_override: true })));
+    toast.success(included ? "All transactions included" : "All transactions excluded");
   }
 
   // Monthly breakdown derived from txns
@@ -407,6 +432,12 @@ function AnalysisDetail() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-hud text-xs text-cyan">TRANSACTIONS ({txns.length})</span>
             <div className="flex items-center gap-2">
+              <button onClick={() => setIncludedAll(true)} disabled={txns.length === 0} className="text-hud text-[10px] text-success border border-success/40 rounded-sm px-2 py-1 hover:bg-success/10 disabled:opacity-40">
+                INCLUDE ALL
+              </button>
+              <button onClick={() => setIncludedAll(false)} disabled={txns.length === 0} className="text-hud text-[10px] text-muted-foreground border border-border rounded-sm px-2 py-1 hover:text-destructive hover:border-destructive/60 disabled:opacity-40">
+                EXCLUDE ALL
+              </button>
               <button onClick={addTxn} className="text-hud text-[10px] text-muted-foreground border border-border rounded-sm px-2 py-1 hover:text-cyan hover:border-cyan/60">+ ADD</button>
               <button onClick={calculate} className="flex items-center gap-1.5 rounded-sm border border-success/60 bg-success/10 px-3 py-1 text-hud text-[10px] text-success hover:bg-success/20">
                 <Calculator className="h-3 w-3" /> CALCULATE INCOME
