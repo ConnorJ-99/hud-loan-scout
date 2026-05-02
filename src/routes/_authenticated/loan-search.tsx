@@ -75,14 +75,15 @@ function LoanSearch() {
 
     // Persist to DB so it shows in dashboard / reports
     if (user) {
-      supabase.from("loan_searches").insert({
+      const row = {
         created_by: user.id,
         nickname: entry.nickname,
-        scenario: s as unknown as Record<string, unknown>,
+        scenario: JSON.parse(JSON.stringify(s)),
         top_lender: topLender?.name ?? null,
         top_product: topProduct?.productName ?? null,
         match_count: ranked.length,
-      }).then(({ error }) => {
+      };
+      supabase.from("loan_searches").insert(row).then(({ error }) => {
         if (error) console.warn("Failed to save loan search:", error);
       });
     }
