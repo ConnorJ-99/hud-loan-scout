@@ -77,8 +77,15 @@ function AnalysisDetail() {
   const [a, setA] = useState<Analysis | null>(null);
   const [statements, setStatements] = useState<Statement[]>([]);
   const [txns, setTxns] = useState<Txn[]>([]);
+  const [borrowers, setBorrowers] = useState<BorrowerOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    supabase.from("borrower_files").select("id, borrower_name").order("borrower_name").then(({ data }) => {
+      setBorrowers((data ?? []) as BorrowerOption[]);
+    });
+  }, []);
 
   const load = useCallback(async () => {
     const [aRes, sRes, tRes] = await Promise.all([
