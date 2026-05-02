@@ -247,13 +247,21 @@ function AnalysisDetail() {
     setTxns((prev) => prev.filter((t) => t.id !== txnId));
   }
 
-  async function calculate() {
+  async function calculateFromDb() {
     if (!a) return;
-    const totalDeposits = txns.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
-    const qualifying = txns.filter((t) => t.included_in_income).reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
+    // Read fresh transactions + statements straight from the DB so we don't
+    // race React state after auto-parse.
+    const [tRes, sRes] = await Promise.all([
+      supabase.from("statement_transactions").select("deposit_amount, included_in_income").eq("income_analysis_id", id),
+      supabase.from("bank_statements").select("parse_status").eq("income_analysis_id", id),
+    ]);
+    const freshTxns = (tRes.data ?? []) as { deposit_amount: number | null; included_in_income: boolean }[];
+    const freshStmts = (sRes.data ?? []) as { parse_status: string }[];
+
+    const totalDeposits = freshTxns.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
+    const qualifying = freshTxns.filter((t) => t.included_in_income).reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
     const excluded = totalDeposits - qualifying;
-    // Prefer count of parsed statements, else fall back to analysis_type
-    const parsedCount = statements.filter((s) => s.parse_status === "parsed").length;
+    const parsedCount = freshStmts.filter((s) => s.parse_status === "parsed").length;
     const fallback = a.analysis_type.startsWith("24") ? 24 : 12;
     const months = parsedCount > 0 ? parsedCount : (a.months_reviewed ?? fallback);
     const avg = months > 0 ? qualifying / months : 0;
@@ -269,8 +277,22 @@ function AnalysisDetail() {
       status: "calculated",
     }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Income calculated");
+    toast.success(`Income calculated: $${qualMonthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo`);
     load();
+  }
+
+  const calculate = calculateFromDb;
+
+  async function setIncludedAll(included: boolean) {
+    if (txns.length === 0) return;
+    const ids = txns.map((t) => t.id);
+    const { error } = await supabase
+      .from("statement_transactions")
+      .update({ included_in_income: included, manual_override: true })
+      .in("id", ids);
+    if (error) return toast.error(error.message);
+    setTxns((prev) => prev.map((t) => ({ ...t, included_in_income: included, manual_override: true })));
+    toast.success(included ? "All transactions included" : "All transactions excluded");
   }
 
   // Monthly breakdown derived from txns
