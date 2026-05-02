@@ -16,6 +16,7 @@ type AnalysisType = "12-month bank statement" | "24-month bank statement" | "Bus
 interface Analysis {
   id: string;
   borrower_name: string;
+  borrower_file_id: string | null;
   analysis_type: string;
   statement_period_start: string | null;
   statement_period_end: string | null;
@@ -30,6 +31,8 @@ interface Analysis {
   reviewer_notes: string | null;
   large_deposit_threshold: number | null;
 }
+
+interface BorrowerOption { id: string; borrower_name: string }
 
 interface Statement {
   id: string;
