@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { PageHeader } from "@/components/loaniq/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Calculator, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/borrowers/$id")({
@@ -31,6 +31,8 @@ function BorrowerDetail() {
   const { id } = Route.useParams() as { id: string };
   const navigate = useNavigate();
   const [b, setB] = useState<Borrower | null>(null);
+  const [analyses, setAnalyses] = useState<{ id: string; borrower_name: string; analysis_type: string; status: string; qualifying_monthly_income: number | null; updated_at: string }[]>([]);
+  const [searches, setSearches] = useState<{ id: string; nickname: string | null; top_lender: string | null; top_product: string | null; match_count: number | null; created_at: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -42,6 +44,12 @@ function BorrowerDetail() {
       }
       setB(data as Borrower);
     });
+    supabase.from("income_analyses").select("id, borrower_name, analysis_type, status, qualifying_monthly_income, updated_at")
+      .eq("borrower_file_id", id).order("updated_at", { ascending: false })
+      .then(({ data }) => setAnalyses((data ?? []) as typeof analyses));
+    supabase.from("loan_searches").select("id, nickname, top_lender, top_product, match_count, created_at")
+      .eq("borrower_file_id", id).order("created_at", { ascending: false })
+      .then(({ data }) => setSearches((data ?? []) as typeof searches));
   }, [id, navigate]);
 
   useEffect(load, [load]);
@@ -105,6 +113,55 @@ function BorrowerDetail() {
         <section className="hud-panel rounded-md p-4">
           <div className="text-hud text-[10px] text-muted-foreground mb-1">NOTES</div>
           <textarea rows={5} className={inputCls} value={b.notes ?? ""} onChange={(e) => setB({ ...b, notes: e.target.value })} />
+        </section>
+
+        <section className="hud-panel rounded-md p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="h-4 w-4 text-cyan" />
+            <span className="text-hud text-xs text-cyan">LINKED INCOME ANALYSES ({analyses.length})</span>
+          </div>
+          {analyses.length === 0 ? (
+            <p className="text-mono text-xs text-muted-foreground py-3 text-center">&gt; No analyses linked. Open Income Analyzer and link this borrower file.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {analyses.map((a) => (
+                <Link key={a.id} to={"/income-analyzer/$id" as never} params={{ id: a.id } as never}
+                  className="flex items-center justify-between rounded-sm border border-border bg-background/40 p-2.5 hover:border-cyan/60 transition">
+                  <div className="min-w-0">
+                    <div className="text-sm truncate">{a.analysis_type}</div>
+                    <div className="text-mono text-[10px] text-muted-foreground">
+                      {a.status}{a.qualifying_monthly_income ? ` · $${Number(a.qualifying_monthly_income).toLocaleString()}/mo` : ""}
+                    </div>
+                  </div>
+                  <div className="text-mono text-[10px] text-muted-foreground">{new Date(a.updated_at).toLocaleDateString()}</div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="hud-panel rounded-md p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Search className="h-4 w-4 text-cyan" />
+            <span className="text-hud text-xs text-cyan">LINKED LOAN SEARCHES ({searches.length})</span>
+          </div>
+          {searches.length === 0 ? (
+            <p className="text-mono text-xs text-muted-foreground py-3 text-center">&gt; No loan searches linked.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {searches.map((s) => (
+                <div key={s.id} className="flex items-center justify-between rounded-sm border border-border bg-background/40 p-2.5">
+                  <div className="min-w-0">
+                    <div className="text-sm truncate">{s.nickname || "Scenario"}</div>
+                    <div className="text-mono text-[10px] text-muted-foreground truncate">
+                      {s.top_lender ? `${s.top_lender} — ${s.top_product}` : "No top match"} · {s.match_count ?? 0} matches
+                    </div>
+                  </div>
+                  <div className="text-mono text-[10px] text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

@@ -16,6 +16,7 @@ type AnalysisType = "12-month bank statement" | "24-month bank statement" | "Bus
 interface Analysis {
   id: string;
   borrower_name: string;
+  borrower_file_id: string | null;
   analysis_type: string;
   statement_period_start: string | null;
   statement_period_end: string | null;
@@ -30,6 +31,8 @@ interface Analysis {
   reviewer_notes: string | null;
   large_deposit_threshold: number | null;
 }
+
+interface BorrowerOption { id: string; borrower_name: string }
 
 interface Statement {
   id: string;
@@ -74,13 +77,20 @@ function AnalysisDetail() {
   const [a, setA] = useState<Analysis | null>(null);
   const [statements, setStatements] = useState<Statement[]>([]);
   const [txns, setTxns] = useState<Txn[]>([]);
+  const [borrowers, setBorrowers] = useState<BorrowerOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    supabase.from("borrower_files").select("id, borrower_name").order("borrower_name").then(({ data }) => {
+      setBorrowers((data ?? []) as BorrowerOption[]);
+    });
+  }, []);
 
   const load = useCallback(async () => {
     const [aRes, sRes, tRes] = await Promise.all([
       supabase.from("income_analyses").select("*").eq("id", id).maybeSingle(),
-      supabase.from("bank_statements").select("id, file_name, bank_name, account_last4, period_start, period_end, parse_status").eq("income_analysis_id", id).order("created_at"),
+      supabase.from("bank_statements").select("id, file_name, bank_name, account_last4, period_start, period_end, parse_status, file_path").eq("income_analysis_id", id).order("created_at"),
       supabase.from("statement_transactions").select("id, txn_date, description, deposit_amount, classification, included_in_income, reason, manual_override").eq("income_analysis_id", id).order("txn_date"),
     ]);
     if (aRes.error || !aRes.data) {
@@ -102,6 +112,7 @@ function AnalysisDetail() {
       .from("income_analyses")
       .update({
         borrower_name: a.borrower_name,
+        borrower_file_id: a.borrower_file_id,
         analysis_type: a.analysis_type,
         statement_period_start: a.statement_period_start,
         statement_period_end: a.statement_period_end,
@@ -145,7 +156,20 @@ function AnalysisDetail() {
       toast.error("No file path");
       return;
     }
-    toast.info("AI parsing not yet wired in this build — manual entry / classification works.");
+    // Mark UI as parsing immediately
+    setStatements((prev) => prev.map((s) => s.id === stmt.id ? { ...s, parse_status: "parsing" } : s));
+    toast.info(`Parsing ${stmt.file_name}…`);
+    const { data, error } = await supabase.functions.invoke("parse-bank-statement", {
+      body: { statementId: stmt.id },
+    });
+    if (error || data?.error) {
+      const msg = data?.error ?? error?.message ?? "Parse failed";
+      toast.error(`Parse failed: ${msg}`);
+      load();
+      return;
+    }
+    toast.success(`Parsed ${data.deposits_extracted} deposits (${data.deposits_included} included)`);
+    load();
   }
 
   async function deleteStatement(stmtId: string) {
@@ -235,6 +259,20 @@ function AnalysisDetail() {
         <section className="hud-panel rounded-md p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <Field label="Borrower Name">
             <input className={inputCls} value={a.borrower_name} onChange={(e) => setA({ ...a, borrower_name: e.target.value })} />
+          </Field>
+          <Field label="Linked Borrower File">
+            <select
+              className={inputCls}
+              value={a.borrower_file_id ?? ""}
+              onChange={(e) => {
+                const bid = e.target.value || null;
+                const match = borrowers.find((b) => b.id === bid);
+                setA({ ...a, borrower_file_id: bid, borrower_name: match?.borrower_name ?? a.borrower_name });
+              }}
+            >
+              <option value="">— None —</option>
+              {borrowers.map((b) => <option key={b.id} value={b.id}>{b.borrower_name}</option>)}
+            </select>
           </Field>
           <Field label="Analysis Type">
             <select className={inputCls} value={a.analysis_type} onChange={(e) => setA({ ...a, analysis_type: e.target.value as AnalysisType })}>
