@@ -127,9 +127,24 @@ function AnalysisDetail() {
     toast.success("Saved");
   }
 
+  async function parseStatementById(stmtId: string, fileName?: string | null) {
+    setStatements((prev) => prev.map((s) => (s.id === stmtId ? { ...s, parse_status: "parsing" } : s)));
+    const { data, error } = await supabase.functions.invoke("parse-bank-statement", {
+      body: { statementId: stmtId },
+    });
+    if (error || data?.error) {
+      const msg = data?.error ?? error?.message ?? "Parse failed";
+      toast.error(`Parse failed${fileName ? ` (${fileName})` : ""}: ${msg}`);
+      return false;
+    }
+    toast.success(`Parsed ${fileName ?? ""}: ${data.deposits_extracted} deposits (${data.deposits_included} included)`);
+    return true;
+  }
+
   async function uploadFiles(files: FileList) {
     if (!user || !a) return;
     setUploading(true);
+    const newIds: { id: string; name: string }[] = [];
     for (const file of Array.from(files)) {
       const path = `${user.id}/${id}/${Date.now()}-${file.name}`;
       const up = await supabase.storage.from("bank-statements").upload(path, file);
@@ -137,17 +152,31 @@ function AnalysisDetail() {
         toast.error(`Upload failed: ${up.error.message}`);
         continue;
       }
-      const { error } = await supabase.from("bank_statements").insert({
-        created_by: user.id,
-        income_analysis_id: id,
-        file_path: path,
-        file_name: file.name,
-        parse_status: "uploaded",
-      });
-      if (error) toast.error(error.message);
+      const { data: row, error } = await supabase
+        .from("bank_statements")
+        .insert({
+          created_by: user.id,
+          income_analysis_id: id,
+          file_path: path,
+          file_name: file.name,
+          parse_status: "uploaded",
+        })
+        .select("id")
+        .single();
+      if (error) {
+        toast.error(error.message);
+        continue;
+      }
+      if (row) newIds.push({ id: row.id, name: file.name });
     }
     setUploading(false);
-    toast.success("Statements uploaded. Parse with AI from the statement row.");
+    if (newIds.length === 0) return;
+    toast.info(`Uploaded ${newIds.length} statement(s). Parsing…`);
+    await load();
+    // Parse sequentially to avoid hammering the AI gateway
+    for (const s of newIds) {
+      await parseStatementById(s.id, s.name);
+    }
     load();
   }
 
@@ -156,19 +185,21 @@ function AnalysisDetail() {
       toast.error("No file path");
       return;
     }
-    // Mark UI as parsing immediately
-    setStatements((prev) => prev.map((s) => s.id === stmt.id ? { ...s, parse_status: "parsing" } : s));
     toast.info(`Parsing ${stmt.file_name}…`);
-    const { data, error } = await supabase.functions.invoke("parse-bank-statement", {
-      body: { statementId: stmt.id },
-    });
-    if (error || data?.error) {
-      const msg = data?.error ?? error?.message ?? "Parse failed";
-      toast.error(`Parse failed: ${msg}`);
-      load();
+    await parseStatementById(stmt.id, stmt.file_name);
+    load();
+  }
+
+  async function parseAllUnparsed() {
+    const targets = statements.filter((s) => s.parse_status !== "parsed");
+    if (targets.length === 0) {
+      toast.info("Nothing to parse");
       return;
     }
-    toast.success(`Parsed ${data.deposits_extracted} deposits (${data.deposits_included} included)`);
+    toast.info(`Parsing ${targets.length} statement(s)…`);
+    for (const s of targets) {
+      await parseStatementById(s.id, s.file_name);
+    }
     load();
   }
 
@@ -218,7 +249,10 @@ function AnalysisDetail() {
     const totalDeposits = txns.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
     const qualifying = txns.filter((t) => t.included_in_income).reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
     const excluded = totalDeposits - qualifying;
-    const months = a.months_reviewed ?? (a.analysis_type.startsWith("24") ? 24 : 12);
+    // Prefer count of parsed statements, else fall back to analysis_type
+    const parsedCount = statements.filter((s) => s.parse_status === "parsed").length;
+    const fallback = a.analysis_type.startsWith("24") ? 24 : 12;
+    const months = parsedCount > 0 ? parsedCount : (a.months_reviewed ?? fallback);
     const avg = months > 0 ? qualifying / months : 0;
     const qualMonthly = avg * Number(a.expense_factor);
 
@@ -235,6 +269,21 @@ function AnalysisDetail() {
     toast.success("Income calculated");
     load();
   }
+
+  // Monthly breakdown derived from txns
+  const monthly = (() => {
+    const map = new Map<string, { total: number; excluded: number; qualifying: number }>();
+    for (const t of txns) {
+      const key = (t.txn_date ?? "").slice(0, 7) || "—";
+      const amt = Number(t.deposit_amount) || 0;
+      const cur = map.get(key) ?? { total: 0, excluded: 0, qualifying: 0 };
+      cur.total += amt;
+      if (t.included_in_income) cur.qualifying += amt;
+      else cur.excluded += amt;
+      map.set(key, cur);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  })();
 
   if (!a) return <div className="p-6 text-mono text-sm text-muted-foreground">Loading...</div>;
 
@@ -298,11 +347,16 @@ function AnalysisDetail() {
           </Field>
           <Field label="Expense Factor">
             <select className={inputCls} value={String(a.expense_factor)} onChange={(e) => setA({ ...a, expense_factor: Number(e.target.value) })}>
-              <option value="0.5">50%</option>
-              <option value="0.6">60%</option>
-              <option value="0.7">70%</option>
-              <option value="1">100% (custom)</option>
+              <option value="0.9">10% expenses (90%)</option>
+              <option value="0.75">25% expenses (75%)</option>
+              <option value="0.5">50% expenses (50%)</option>
+              <option value="0.4">60% expenses (40%)</option>
+              <option value="0.3">70% expenses (30%)</option>
+              <option value="1">100% (no haircut)</option>
             </select>
+          </Field>
+          <Field label="Large Deposit Threshold">
+            <input type="number" className={inputCls} value={a.large_deposit_threshold ?? 5000} onChange={(e) => setA({ ...a, large_deposit_threshold: Number(e.target.value) })} />
           </Field>
         </section>
 
@@ -313,11 +367,18 @@ function AnalysisDetail() {
               <FileText className="h-4 w-4 text-cyan" />
               <span className="text-hud text-xs text-cyan">BANK STATEMENTS</span>
             </div>
-            <label className={`flex items-center gap-2 rounded-sm border border-cyan bg-cyan/10 px-3 py-1.5 text-hud text-xs text-cyan hover:bg-cyan/20 transition cursor-pointer ${uploading ? "opacity-50" : ""}`}>
-              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} UPLOAD PDFS
-              <input type="file" accept="application/pdf" multiple className="hidden" disabled={uploading}
-                onChange={(e) => e.target.files && uploadFiles(e.target.files)} />
-            </label>
+            <div className="flex items-center gap-2">
+              {statements.some((s) => s.parse_status !== "parsed") && (
+                <button onClick={parseAllUnparsed} className="text-hud text-[10px] text-cyan border border-cyan/40 rounded-sm px-2 py-1 hover:bg-cyan/10">
+                  PARSE ALL
+                </button>
+              )}
+              <label className={`flex items-center gap-2 rounded-sm border border-cyan bg-cyan/10 px-3 py-1.5 text-hud text-xs text-cyan hover:bg-cyan/20 transition cursor-pointer ${uploading ? "opacity-50" : ""}`}>
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} UPLOAD PDFS
+                <input type="file" accept="application/pdf" multiple className="hidden" disabled={uploading}
+                  onChange={(e) => e.target.files && uploadFiles(e.target.files)} />
+              </label>
+            </div>
           </div>
           {statements.length === 0 ? (
             <p className="text-mono text-xs text-muted-foreground py-4 text-center">&gt; No statements uploaded yet.</p>
@@ -403,6 +464,35 @@ function AnalysisDetail() {
             </div>
           )}
         </section>
+
+        {/* Monthly Breakdown */}
+        {monthly.length > 0 && (
+          <section className="hud-panel rounded-md p-4">
+            <span className="text-hud text-xs text-cyan">MONTHLY BREAKDOWN</span>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-1.5 text-hud text-[9px] text-muted-foreground">MONTH</th>
+                    <th className="text-right py-1.5 text-hud text-[9px] text-muted-foreground">TOTAL DEPOSITS</th>
+                    <th className="text-right py-1.5 text-hud text-[9px] text-muted-foreground">EXCLUDED</th>
+                    <th className="text-right py-1.5 text-hud text-[9px] text-muted-foreground">QUALIFYING</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthly.map(([month, m]) => (
+                    <tr key={month} className="border-b border-border last:border-b-0">
+                      <td className="py-1 text-mono">{month}</td>
+                      <td className="py-1 text-right text-mono">${m.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td className="py-1 text-right text-mono text-muted-foreground">${m.excluded.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td className="py-1 text-right text-mono text-success">${m.qualifying.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Results */}
         <section className="hud-panel rounded-md p-4">
