@@ -249,7 +249,10 @@ function AnalysisDetail() {
     const totalDeposits = txns.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
     const qualifying = txns.filter((t) => t.included_in_income).reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0);
     const excluded = totalDeposits - qualifying;
-    const months = a.months_reviewed ?? (a.analysis_type.startsWith("24") ? 24 : 12);
+    // Prefer count of parsed statements, else fall back to analysis_type
+    const parsedCount = statements.filter((s) => s.parse_status === "parsed").length;
+    const fallback = a.analysis_type.startsWith("24") ? 24 : 12;
+    const months = parsedCount > 0 ? parsedCount : (a.months_reviewed ?? fallback);
     const avg = months > 0 ? qualifying / months : 0;
     const qualMonthly = avg * Number(a.expense_factor);
 
@@ -266,6 +269,21 @@ function AnalysisDetail() {
     toast.success("Income calculated");
     load();
   }
+
+  // Monthly breakdown derived from txns
+  const monthly = (() => {
+    const map = new Map<string, { total: number; excluded: number; qualifying: number }>();
+    for (const t of txns) {
+      const key = (t.txn_date ?? "").slice(0, 7) || "—";
+      const amt = Number(t.deposit_amount) || 0;
+      const cur = map.get(key) ?? { total: 0, excluded: 0, qualifying: 0 };
+      cur.total += amt;
+      if (t.included_in_income) cur.qualifying += amt;
+      else cur.excluded += amt;
+      map.set(key, cur);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  })();
 
   if (!a) return <div className="p-6 text-mono text-sm text-muted-foreground">Loading...</div>;
 
