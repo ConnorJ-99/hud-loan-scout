@@ -181,6 +181,7 @@ function PayrollPage() {
                     <th className="px-4 py-2">Pay period</th>
                     <th className="px-4 py-2">Salary</th>
                     <th className="px-4 py-2">Draw</th>
+                    <th className="px-4 py-2">Status</th>
                     <th className="px-4 py-2">Paid on</th>
                     <th className="px-4 py-2">Notes</th>
                     <th></th>
@@ -193,16 +194,28 @@ function PayrollPage() {
                       <td className="px-4 py-2">{formatDate(p.pay_period)}</td>
                       <td className="px-4 py-2 font-mono">{formatCurrency(Number(p.salary_amount ?? 0))}</td>
                       <td className="px-4 py-2 font-mono">{formatCurrency(Number(p.draw_amount ?? 0))}</td>
+                      <td className="px-4 py-2">
+                        {p.paid_on ? (
+                          <span className="inline-block rounded px-2 py-0.5 text-xs bg-emerald-500/15 text-emerald-300">Paid</span>
+                        ) : (
+                          <span className="inline-block rounded px-2 py-0.5 text-xs bg-amber-500/15 text-amber-300">Pending</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2 text-muted-foreground">{formatDate(p.paid_on)}</td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">{p.notes ?? "—"}</td>
                       <td className="px-4 py-2 text-right">
-                        <Button size="icon" variant="ghost" onClick={() => removePayout.mutate(p.id)}>
-                          <Trash2 className="size-4 text-red-500" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          {!p.paid_on && (
+                            <Button size="sm" variant="outline" onClick={() => markPaid.mutate(p.id)}>Mark paid</Button>
+                          )}
+                          <Button size="icon" variant="ghost" onClick={() => removePayout.mutate(p.id)}>
+                            <Trash2 className="size-4 text-red-500" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  {payouts.length === 0 && <tr><td colSpan={7} className="text-center text-muted-foreground py-10">No payouts recorded.</td></tr>}
+                  {payouts.length === 0 && <tr><td colSpan={9} className="text-center text-muted-foreground py-10">No payouts recorded.</td></tr>}
                 </tbody>
               </table>
             </div>
