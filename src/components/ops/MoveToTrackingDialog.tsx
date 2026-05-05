@@ -53,13 +53,11 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
       const p = profiles.find((x) => x.user_id === lead.assigned_lo);
       const dflt = Number(p?.default_comp_pct ?? 0);
       setCoPct(dflt > 0 ? (dflt * 100).toFixed(3) : "");
-      const lo = Number(p?.default_lo_split_pct ?? 0);
-      const hs = Number(p?.default_house_split_pct ?? 0);
-      setLoSplit(lo > 0 ? (lo * 100).toFixed(2) : "50");
-      setHouseSplit(hs > 0 ? (hs * 100).toFixed(2) : "50");
     } else {
-      setCoPct(""); setLoSplit("50"); setHouseSplit("50");
+      setCoPct("");
     }
+    setLoSplit("");
+    setHouseSplit("");
     setRevenue("");
   }, [lead, open, profiles]);
 
