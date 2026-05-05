@@ -90,6 +90,15 @@ function PayrollPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops-payouts"] }),
   });
 
+  const markPaid = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("salary_payouts").update({ paid_on: today }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Marked paid"); qc.invalidateQueries({ queryKey: ["ops-payouts"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div>
       <OpsPageHeader
