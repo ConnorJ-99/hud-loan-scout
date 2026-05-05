@@ -914,6 +914,8 @@ export type Database = {
           id: string
           monthly_draw: number
           monthly_salary: number
+          pay_day: number | null
+          pay_frequency: string
           updated_at: string
           user_id: string
         }
@@ -929,6 +931,8 @@ export type Database = {
           id?: string
           monthly_draw?: number
           monthly_salary?: number
+          pay_day?: number | null
+          pay_frequency?: string
           updated_at?: string
           user_id: string
         }
@@ -944,6 +948,8 @@ export type Database = {
           id?: string
           monthly_draw?: number
           monthly_salary?: number
+          pay_day?: number | null
+          pay_frequency?: string
           updated_at?: string
           user_id?: string
         }
