@@ -750,6 +750,7 @@ export type Database = {
           actual_close_date: string | null
           assigned_lo: string | null
           borrower_email: string | null
+          borrower_file_id: string | null
           borrower_name: string
           borrower_phone: string | null
           comp_flat_amount: number
@@ -780,6 +781,7 @@ export type Database = {
           actual_close_date?: string | null
           assigned_lo?: string | null
           borrower_email?: string | null
+          borrower_file_id?: string | null
           borrower_name: string
           borrower_phone?: string | null
           comp_flat_amount?: number
@@ -810,6 +812,7 @@ export type Database = {
           actual_close_date?: string | null
           assigned_lo?: string | null
           borrower_email?: string | null
+          borrower_file_id?: string | null
           borrower_name?: string
           borrower_phone?: string | null
           comp_flat_amount?: number
