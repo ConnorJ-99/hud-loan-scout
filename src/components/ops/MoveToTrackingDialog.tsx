@@ -16,13 +16,13 @@ type Lead = {
   loan_amount: number | null; purchase_price: number | null; loan_type: string | null;
 };
 
-const DEFAULT_STAGE = "application"; // "Pre-Approved" equivalent
+const DEFAULT_STAGE = "application";
 
 export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
   lead: Lead | null; open: boolean; onOpenChange: (o: boolean) => void;
 }) {
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [borrowerName, setBorrowerName] = useState("");
   const [loanType, setLoanType] = useState("");
   const [loanAmount, setLoanAmount] = useState("");
@@ -38,7 +38,6 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles() });
 
-  // Prefill form whenever lead changes / dialog opens
   useEffect(() => {
     if (!lead || !open) return;
     setBorrowerName(lead.name ?? "");
@@ -77,10 +76,27 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
       const loSp = (Number(loSplit) || 0) / 100;
       const houseSp = (Number(houseSplit) || 0) / 100;
 
+      let borrowerFileId: string | null = null;
+      if (user?.id) {
+        const { data: borrowerFile, error: borrowerErr } = await supabase.from("borrower_files").insert({
+          created_by: user.id,
+          borrower_name: borrowerName.trim(),
+          email: lead.email,
+          phone: lead.phone,
+          loan_amount: amount || null,
+          purchase_price: purchasePrice ? Number(purchasePrice) : null,
+          target_program: loanType || null,
+          status: "active",
+        }).select("id").single();
+        if (borrowerErr) throw borrowerErr;
+        borrowerFileId = borrowerFile.id;
+      }
+
       const { data: loan, error: loanErr } = await supabase.from("loans").insert({
         borrower_name: borrowerName.trim(),
         borrower_phone: lead.phone,
         borrower_email: lead.email,
+        borrower_file_id: borrowerFileId,
         loan_type: loanType || null,
         loan_amount: amount,
         purchase_price: purchasePrice ? Number(purchasePrice) : null,
@@ -180,7 +196,7 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
                 <div className="space-y-1"><Label>House Split (%)</Label>
                   <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 30" value={houseSplit} onChange={(e) => setHouseSplit(e.target.value)} /></div>
               </div>
-              <p className="text-xs text-muted-foreground">Compensation fields are admin-only and locked once the loan is in tracking.</p>
+              <p className="text-xs text-muted-foreground">A borrower profile is created automatically when the lead moves into tracking.</p>
             </>
           )}
           {!isAdmin && (

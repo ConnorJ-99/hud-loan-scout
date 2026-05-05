@@ -11,6 +11,8 @@ export type StaffProfile = {
   comp_plan?: string | null;
   monthly_salary?: number | null;
   monthly_draw?: number | null;
+  annual_salary?: number | null;
+  annual_draw?: number | null;
   pay_frequency?: string | null;
   pay_day?: number | null;
 };
