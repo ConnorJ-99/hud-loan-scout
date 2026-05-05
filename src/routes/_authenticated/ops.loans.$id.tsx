@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LoanFeesEditor } from "@/components/ops/LoanFeesEditor";
 import { fetchStaffProfiles, staffName, staffNameByUserId } from "@/lib/ops/profiles";
 import {
-  COMP_MODES, LOAN_STAGES, computeBreakdown, formatCurrency, formatDate,
+  COMP_MODES, LOAN_STAGES, LOAN_TYPES, computeBreakdown, formatCurrency, formatDate,
   labelFor, loanStageBadgeClass, type CompMode, type LoanStage,
 } from "@/lib/ops/loan-helpers";
 import { ArrowLeft } from "lucide-react";
@@ -123,8 +123,14 @@ function LoanDetail() {
                   onBlur={(e) => e.target.value !== loan.borrower_name && update.mutate({ borrower_name: e.target.value })} />
               </Field>
               <Field label="Loan type">
-                <Input disabled={!canEdit} defaultValue={loan.loan_type ?? ""}
-                  onBlur={(e) => update.mutate({ loan_type: e.target.value || null })} />
+                <Select disabled={!canEdit} value={loan.loan_type ?? "__none"}
+                  onValueChange={(v) => update.mutate({ loan_type: v === "__none" ? null : v })}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">—</SelectItem>
+                    {LOAN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Loan amount ($)">
                 <Input disabled={!canEdit} type="number" defaultValue={Number(loan.loan_amount ?? 0)}
@@ -168,11 +174,33 @@ function LoanDetail() {
                 <Input disabled={!canEdit} defaultValue={loan.borrower_email ?? ""}
                   onBlur={(e) => update.mutate({ borrower_email: e.target.value || null })} />
               </Field>
+              <Field label="Purchase price ($)">
+                <Input disabled={!canEdit} type="number" defaultValue={Number(loan.purchase_price ?? 0)}
+                  onBlur={(e) => update.mutate({ purchase_price: e.target.value === "" ? null : Number(e.target.value) })} />
+              </Field>
+              <Field label="Interest rate (%)">
+                <Input disabled={!canEdit} type="number" step="0.001" defaultValue={Number(loan.interest_rate ?? 0)}
+                  onBlur={(e) => update.mutate({ interest_rate: e.target.value === "" ? null : Number(e.target.value) })} />
+              </Field>
+              <Field label="Realtor name">
+                <Input disabled={!canEdit} defaultValue={loan.realtor_name ?? ""}
+                  onBlur={(e) => update.mutate({ realtor_name: e.target.value || null })} />
+              </Field>
+              <Field label="Realtor phone">
+                <Input disabled={!canEdit} defaultValue={loan.realtor_phone ?? ""}
+                  onBlur={(e) => update.mutate({ realtor_phone: e.target.value || null })} />
+              </Field>
+              <Field label="Realtor email">
+                <Input disabled={!canEdit} defaultValue={loan.realtor_email ?? ""}
+                  onBlur={(e) => update.mutate({ realtor_email: e.target.value || null })} />
+              </Field>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Compensation</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Compensation {!isAdmin && <span className="text-xs text-muted-foreground font-normal">(admin-only)</span>}</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Field label="Comp mode">

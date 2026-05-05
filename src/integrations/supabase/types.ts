@@ -337,9 +337,12 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          loan_amount: number | null
+          loan_type: string | null
           name: string
           notes: string | null
           phone: string | null
+          purchase_price: number | null
           raw_payload: Json | null
           source: Database["public"]["Enums"]["lead_source"]
           status: Database["public"]["Enums"]["lead_status"]
@@ -351,9 +354,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          loan_amount?: number | null
+          loan_type?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          purchase_price?: number | null
           raw_payload?: Json | null
           source?: Database["public"]["Enums"]["lead_source"]
           status?: Database["public"]["Enums"]["lead_status"]
@@ -365,9 +371,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          loan_amount?: number | null
+          loan_type?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          purchase_price?: number | null
           raw_payload?: Json | null
           source?: Database["public"]["Enums"]["lead_source"]
           status?: Database["public"]["Enums"]["lead_status"]
@@ -752,12 +761,17 @@ export type Database = {
           gross_commission: number
           house_split_pct: number
           id: string
+          interest_rate: number | null
           lo_comp_amount: number | null
           lo_comp_pct: number | null
           lo_split_pct: number
           loan_amount: number | null
           loan_type: string | null
           notes: string | null
+          purchase_price: number | null
+          realtor_email: string | null
+          realtor_name: string | null
+          realtor_phone: string | null
           source_lead_id: string | null
           stage: Database["public"]["Enums"]["loan_stage"]
           updated_at: string
@@ -777,12 +791,17 @@ export type Database = {
           gross_commission?: number
           house_split_pct?: number
           id?: string
+          interest_rate?: number | null
           lo_comp_amount?: number | null
           lo_comp_pct?: number | null
           lo_split_pct?: number
           loan_amount?: number | null
           loan_type?: string | null
           notes?: string | null
+          purchase_price?: number | null
+          realtor_email?: string | null
+          realtor_name?: string | null
+          realtor_phone?: string | null
           source_lead_id?: string | null
           stage?: Database["public"]["Enums"]["loan_stage"]
           updated_at?: string
@@ -802,12 +821,17 @@ export type Database = {
           gross_commission?: number
           house_split_pct?: number
           id?: string
+          interest_rate?: number | null
           lo_comp_amount?: number | null
           lo_comp_pct?: number | null
           lo_split_pct?: number
           loan_amount?: number | null
           loan_type?: string | null
           notes?: string | null
+          purchase_price?: number | null
+          realtor_email?: string | null
+          realtor_name?: string | null
+          realtor_phone?: string | null
           source_lead_id?: string | null
           stage?: Database["public"]["Enums"]["loan_stage"]
           updated_at?: string
@@ -1194,7 +1218,14 @@ export type Database = {
         | "misc"
       fee_deduct_from: "lo_split" | "house_split"
       fee_recipient_role: "loan_officer" | "processor" | "assistant" | "admin"
-      lead_source: "ghl" | "zapier" | "website" | "zillow" | "other"
+      lead_source:
+        | "ghl"
+        | "zapier"
+        | "website"
+        | "zillow"
+        | "other"
+        | "realtor"
+        | "referral"
       lead_status:
         | "new"
         | "contacted"
@@ -1362,7 +1393,15 @@ export const Constants = {
       ],
       fee_deduct_from: ["lo_split", "house_split"],
       fee_recipient_role: ["loan_officer", "processor", "assistant", "admin"],
-      lead_source: ["ghl", "zapier", "website", "zillow", "other"],
+      lead_source: [
+        "ghl",
+        "zapier",
+        "website",
+        "zillow",
+        "other",
+        "realtor",
+        "referral",
+      ],
       lead_status: [
         "new",
         "contacted",

@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LEAD_STATUSES, LEAD_SOURCES, formatDate, labelFor, leadStatusBadgeClass, type LeadStatus, type LeadSource } from "@/lib/ops/loan-helpers";
+import { LEAD_STATUSES, LEAD_SOURCES, formatCurrency, formatDate, labelFor, leadStatusBadgeClass, type LeadStatus, type LeadSource } from "@/lib/ops/loan-helpers";
 import { fetchStaffProfiles, staffNameByUserId } from "@/lib/ops/profiles";
 import { MoveToTrackingDialog } from "@/components/ops/MoveToTrackingDialog";
 import { NewLeadDialog } from "@/components/ops/NewLeadDialog";
+import { EditLeadDialog, type EditableLead } from "@/components/ops/EditLeadDialog";
 import { useAuth } from "@/lib/auth/useAuth";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/ops/leads")({
   component: LeadsPage,
@@ -27,8 +29,9 @@ function LeadsPage() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [movingLead, setMovingLead] = useState<{ id: string; name: string; phone: string | null; email: string | null; assigned_lo: string | null } | null>(null);
+  const [movingLead, setMovingLead] = useState<{ id: string; name: string; phone: string | null; email: string | null; assigned_lo: string | null; loan_amount: number | null; purchase_price: number | null; loan_type: string | null } | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<EditableLead | null>(null);
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles() });
   const { data: leads = [], isLoading } = useQuery({
@@ -136,6 +139,7 @@ function LeadsPage() {
                   </th>
                   <th className="px-4 py-2">Lead</th>
                   <th className="px-4 py-2">Source</th>
+                  <th className="px-4 py-2">Loan</th>
                   <th className="px-4 py-2">Assigned LO</th>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Created</th>
@@ -143,9 +147,9 @@ function LeadsPage() {
                 </tr>
               </thead>
               <tbody>
-                {isLoading && <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Loading…</td></tr>}
+                {isLoading && <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Loading…</td></tr>}
                 {!isLoading && filtered.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">No leads. Configure a webhook in admin to start receiving leads.</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">No leads. Configure a webhook in admin to start receiving leads.</td></tr>
                 )}
                 {filtered.map((l) => (
                   <tr key={l.id} className="border-b border-border last:border-b-0 hover:bg-panel/30">
@@ -161,6 +165,10 @@ function LeadsPage() {
                       <div className="text-xs text-muted-foreground">{l.email || l.phone || "—"}</div>
                     </td>
                     <td className="px-4 py-3">{labelFor(LEAD_SOURCES, l.source as LeadSource)}</td>
+                    <td className="px-4 py-3">
+                      <div>{l.loan_type || "—"}</div>
+                      <div className="text-xs text-muted-foreground">{l.loan_amount ? formatCurrency(Number(l.loan_amount)) : "—"}</div>
+                    </td>
                     <td className="px-4 py-3">{staffNameByUserId(profiles, l.assigned_lo)}</td>
                     <td className="px-4 py-3">
                       <Badge variant="outline" className={leadStatusBadgeClass(l.status as LeadStatus)}>
@@ -169,11 +177,30 @@ function LeadsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(l.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      {l.status !== "moved_to_tracking" && (
-                        <Button size="sm" onClick={() => setMovingLead({ id: l.id, name: l.name, phone: l.phone, email: l.email, assigned_lo: l.assigned_lo })}>
-                          Move to Tracking
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" title="Edit"
+                          onClick={() => setEditingLead({
+                            id: l.id, name: l.name, phone: l.phone, email: l.email,
+                            source: l.source as LeadSource, status: l.status as LeadStatus,
+                            assigned_lo: l.assigned_lo,
+                            loan_amount: l.loan_amount === null || l.loan_amount === undefined ? null : Number(l.loan_amount),
+                            purchase_price: l.purchase_price === null || l.purchase_price === undefined ? null : Number(l.purchase_price),
+                            loan_type: l.loan_type ?? null,
+                            notes: l.notes ?? null,
+                          })}>
+                          <Pencil className="size-4" />
                         </Button>
-                      )}
+                        {l.status !== "moved_to_tracking" && (
+                          <Button size="sm" onClick={() => setMovingLead({
+                            id: l.id, name: l.name, phone: l.phone, email: l.email, assigned_lo: l.assigned_lo,
+                            loan_amount: l.loan_amount === null || l.loan_amount === undefined ? null : Number(l.loan_amount),
+                            purchase_price: l.purchase_price === null || l.purchase_price === undefined ? null : Number(l.purchase_price),
+                            loan_type: l.loan_type ?? null,
+                          })}>
+                            Move to Tracking
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -185,6 +212,7 @@ function LeadsPage() {
 
       <MoveToTrackingDialog lead={movingLead} open={!!movingLead} onOpenChange={(o) => { if (!o) setMovingLead(null); }} />
       <NewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} />
+      <EditLeadDialog lead={editingLead} open={!!editingLead} onOpenChange={(o) => { if (!o) setEditingLead(null); }} />
     </div>
   );
 }
