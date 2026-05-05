@@ -6,6 +6,9 @@ import { OpsPageHeader } from "@/components/ops/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchStaffProfiles, staffNameByUserId } from "@/lib/ops/profiles";
 import { computeBreakdown, formatCurrency, type CompMode } from "@/lib/ops/loan-helpers";
+import { Button } from "@/components/ui/button";
+import { downloadCsv, toCsv } from "@/lib/ops/csv";
+import { Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/ops/admin/production")({
   beforeLoad: async () => {
