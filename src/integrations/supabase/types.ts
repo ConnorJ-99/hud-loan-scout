@@ -903,6 +903,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          annual_draw: number
+          annual_salary: number
           comp_plan: Database["public"]["Enums"]["comp_plan"]
           created_at: string
           default_comp_pct: number
@@ -920,6 +922,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          annual_draw?: number
+          annual_salary?: number
           comp_plan?: Database["public"]["Enums"]["comp_plan"]
           created_at?: string
           default_comp_pct?: number
@@ -937,6 +941,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          annual_draw?: number
+          annual_salary?: number
           comp_plan?: Database["public"]["Enums"]["comp_plan"]
           created_at?: string
           default_comp_pct?: number
