@@ -29,8 +29,9 @@ function LeadsPage() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [movingLead, setMovingLead] = useState<{ id: string; name: string; phone: string | null; email: string | null; assigned_lo: string | null } | null>(null);
+  const [movingLead, setMovingLead] = useState<{ id: string; name: string; phone: string | null; email: string | null; assigned_lo: string | null; loan_amount: number | null; purchase_price: number | null; loan_type: string | null } | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<EditableLead | null>(null);
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles() });
   const { data: leads = [], isLoading } = useQuery({
