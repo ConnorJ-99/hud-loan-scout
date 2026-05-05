@@ -33,8 +33,8 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
   const [assignedLo, setAssignedLo] = useState<string>("");
   const [coPct, setCoPct] = useState("");
   const [revenue, setRevenue] = useState("");
-  const [loSplit, setLoSplit] = useState("50");
-  const [houseSplit, setHouseSplit] = useState("50");
+  const [loSplit, setLoSplit] = useState("");
+  const [houseSplit, setHouseSplit] = useState("");
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles() });
 
