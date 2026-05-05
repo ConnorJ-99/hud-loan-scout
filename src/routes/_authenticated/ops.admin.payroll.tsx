@@ -62,20 +62,21 @@ function PayrollPage() {
 
   const addPayout = useMutation({
     mutationFn: async () => {
+      const noteWithFreq = [form.frequency ? `Frequency: ${form.frequency}` : "", form.notes].filter(Boolean).join(" | ");
       const { error } = await supabase.from("salary_payouts").insert({
         user_id: form.user_id,
         pay_period: form.pay_period,
         salary_amount: Number(form.salary_amount) || 0,
         draw_amount: Number(form.draw_amount) || 0,
         paid_on: form.paid_on || null,
-        notes: form.notes || null,
+        notes: noteWithFreq || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Payout recorded");
       setOpen(false);
-      setForm({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", notes: "" });
+      setForm({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", frequency: "monthly", notes: "" });
       qc.invalidateQueries({ queryKey: ["ops-payouts"] });
     },
     onError: (e: Error) => toast.error(e.message),
