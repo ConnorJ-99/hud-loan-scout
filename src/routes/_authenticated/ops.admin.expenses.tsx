@@ -96,7 +96,7 @@ function ExpensesPage() {
                     <td className="px-4 py-2 font-mono">{formatCurrency(Number(e.amount ?? 0))}</td>
                     <td className="px-4 py-2 text-muted-foreground">{formatDate(e.date_due)}</td>
                     <td className="px-4 py-2 text-muted-foreground">{formatDate(e.date_paid)}</td>
-                    <td className="px-4 py-2 text-xs">{e.is_recurring ? (e.recurrence || "Yes") : "—"}</td>
+                    <td className="px-4 py-2 text-xs capitalize">{e.is_recurring ? (e.recurrence || "Yes") : "—"}</td>
                     <td className="px-4 py-2 text-right">
                       <Button size="icon" variant="ghost" onClick={() => remove.mutate(e.id)}>
                         <Trash2 className="size-4 text-red-500" />
@@ -134,10 +134,19 @@ function ExpensesPage() {
                 <Input type="date" value={form.date_paid} onChange={(e) => setForm({ ...form, date_paid: e.target.value })} /></div>
             </div>
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="rec" checked={form.is_recurring} onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })} />
+              <input type="checkbox" id="rec" checked={form.is_recurring} onChange={(e) => setForm({ ...form, is_recurring: e.target.checked, recurrence: e.target.checked && !form.recurrence ? "monthly" : form.recurrence })} />
               <Label htmlFor="rec">Recurring</Label>
               {form.is_recurring && (
-                <Input className="ml-2" placeholder="monthly, weekly…" value={form.recurrence} onChange={(e) => setForm({ ...form, recurrence: e.target.value })} />
+                <Select value={form.recurrence || "monthly"} onValueChange={(v) => setForm({ ...form, recurrence: v })}>
+                  <SelectTrigger className="ml-2 w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
             </div>
             <div className="space-y-1"><Label>Notes</Label>

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsPageHeader } from "@/components/ops/PageHeader";
@@ -62,14 +62,19 @@ function LoansPage() {
                       </div>
                       <div className="rounded-b-md border border-border bg-panel/20 p-2 space-y-2 min-h-[300px]">
                         {items.map((l) => (
-                          <div key={l.id} className="block rounded-md border border-border bg-panel/40 p-3">
+                          <Link
+                            key={l.id}
+                            to="/ops/loans/$id"
+                            params={{ id: l.id }}
+                            className="block rounded-md border border-border bg-panel/40 p-3 hover:border-cyan/60 hover:bg-panel/60 transition-colors"
+                          >
                             <div className="font-medium text-sm truncate">{l.borrower_name}</div>
                             <div className="text-xs text-muted-foreground mt-0.5">{l.loan_type || "—"}</div>
                             <div className="text-sm font-semibold mt-1">{formatCurrency(Number(l.loan_amount ?? 0))}</div>
                             <div className="text-xs text-muted-foreground mt-1">
                               {staffNameByUserId(profiles, l.assigned_lo)} • {l.expected_close_date ? formatDate(l.expected_close_date) : "no close date"}
                             </div>
-                          </div>
+                          </Link>
                         ))}
                         {items.length === 0 && <div className="text-xs text-muted-foreground text-center py-6">Empty</div>}
                       </div>
@@ -98,7 +103,11 @@ function LoansPage() {
                   <tbody>
                     {loans.map((l) => (
                       <tr key={l.id} className="border-b border-border last:border-b-0 hover:bg-panel/30">
-                        <td className="px-4 py-3 font-medium">{l.borrower_name}</td>
+                        <td className="px-4 py-3 font-medium">
+                          <Link to="/ops/loans/$id" params={{ id: l.id }} className="hover:text-cyan underline-offset-2 hover:underline">
+                            {l.borrower_name}
+                          </Link>
+                        </td>
                         <td className="px-4 py-3">{l.loan_type || "—"}</td>
                         <td className="px-4 py-3">{formatCurrency(Number(l.loan_amount ?? 0))}</td>
                         <td className="px-4 py-3">

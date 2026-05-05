@@ -33,8 +33,8 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
   const [assignedLo, setAssignedLo] = useState<string>("");
   const [coPct, setCoPct] = useState("");
   const [revenue, setRevenue] = useState("");
-  const [loSplit, setLoSplit] = useState("50");
-  const [houseSplit, setHouseSplit] = useState("50");
+  const [loSplit, setLoSplit] = useState("");
+  const [houseSplit, setHouseSplit] = useState("");
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles() });
 
@@ -53,13 +53,11 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
       const p = profiles.find((x) => x.user_id === lead.assigned_lo);
       const dflt = Number(p?.default_comp_pct ?? 0);
       setCoPct(dflt > 0 ? (dflt * 100).toFixed(3) : "");
-      const lo = Number(p?.default_lo_split_pct ?? 0);
-      const hs = Number(p?.default_house_split_pct ?? 0);
-      setLoSplit(lo > 0 ? (lo * 100).toFixed(2) : "50");
-      setHouseSplit(hs > 0 ? (hs * 100).toFixed(2) : "50");
     } else {
-      setCoPct(""); setLoSplit("50"); setHouseSplit("50");
+      setCoPct("");
     }
+    setLoSplit("");
+    setHouseSplit("");
     setRevenue("");
   }, [lead, open, profiles]);
 
@@ -68,10 +66,6 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
     const p = profiles.find((x) => x.user_id === v);
     const dflt = Number(p?.default_comp_pct ?? 0);
     if (dflt > 0) setCoPct((dflt * 100).toFixed(3));
-    const lo = Number(p?.default_lo_split_pct ?? 0);
-    const hs = Number(p?.default_house_split_pct ?? 0);
-    if (lo > 0) setLoSplit((lo * 100).toFixed(2));
-    if (hs > 0) setHouseSplit((hs * 100).toFixed(2));
   };
 
   const mutation = useMutation({
@@ -182,9 +176,9 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1"><Label>LO Split (%)</Label>
-                  <Input type="number" min="0" max="100" step="0.01" value={loSplit} onChange={(e) => setLoSplit(e.target.value)} /></div>
+                  <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 70" value={loSplit} onChange={(e) => setLoSplit(e.target.value)} /></div>
                 <div className="space-y-1"><Label>House Split (%)</Label>
-                  <Input type="number" min="0" max="100" step="0.01" value={houseSplit} onChange={(e) => setHouseSplit(e.target.value)} /></div>
+                  <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 30" value={houseSplit} onChange={(e) => setHouseSplit(e.target.value)} /></div>
               </div>
               <p className="text-xs text-muted-foreground">Compensation fields are admin-only and locked once the loan is in tracking.</p>
             </>

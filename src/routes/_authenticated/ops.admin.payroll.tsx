@@ -28,7 +28,22 @@ export const Route = createFileRoute("/_authenticated/ops/admin/payroll")({
 function PayrollPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", notes: "" });
+  const [form, setForm] = useState({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", frequency: "monthly", notes: "" });
+  const today = new Date().toISOString().slice(0, 10);
+  const firstOfMonth = today.slice(0, 8) + "01";
+  const openPayoutFor = (user_id: string) => {
+    const p = profiles.find((x) => x.user_id === user_id);
+    setForm({
+      user_id,
+      pay_period: firstOfMonth,
+      salary_amount: p ? String(Number(p.monthly_salary ?? 0)) : "",
+      draw_amount: p ? String(Number(p.monthly_draw ?? 0)) : "",
+      paid_on: today,
+      frequency: "monthly",
+      notes: "",
+    });
+    setOpen(true);
+  };
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles("monthly_salary, monthly_draw, comp_plan") });
   const { data: payouts = [] } = useQuery({
@@ -47,20 +62,21 @@ function PayrollPage() {
 
   const addPayout = useMutation({
     mutationFn: async () => {
+      const noteWithFreq = [form.frequency ? `Frequency: ${form.frequency}` : "", form.notes].filter(Boolean).join(" | ");
       const { error } = await supabase.from("salary_payouts").insert({
         user_id: form.user_id,
         pay_period: form.pay_period,
         salary_amount: Number(form.salary_amount) || 0,
         draw_amount: Number(form.draw_amount) || 0,
         paid_on: form.paid_on || null,
-        notes: form.notes || null,
+        notes: noteWithFreq || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Payout recorded");
       setOpen(false);
-      setForm({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", notes: "" });
+      setForm({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", frequency: "monthly", notes: "" });
       qc.invalidateQueries({ queryKey: ["ops-payouts"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -72,6 +88,15 @@ function PayrollPage() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops-payouts"] }),
+  });
+
+  const markPaid = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("salary_payouts").update({ paid_on: today }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Marked paid"); qc.invalidateQueries({ queryKey: ["ops-payouts"] }); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return (
@@ -110,8 +135,7 @@ function PayrollPage() {
                     <th className="px-4 py-2">Plan</th>
                     <th className="px-4 py-2">Monthly salary</th>
                     <th className="px-4 py-2">Monthly draw</th>
-                    <th className="px-4 py-2">Default LO split (%)</th>
-                    <th className="px-4 py-2">Default house split (%)</th>
+                    <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -133,13 +157,10 @@ function PayrollPage() {
                         <Input type="number" className="h-8 w-32" defaultValue={Number(p.monthly_draw ?? 0)}
                           onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { monthly_draw: Number(e.target.value) || 0 } })} />
                       </td>
-                      <td className="px-4 py-2">
-                        <Input type="number" step="0.01" className="h-8 w-24" defaultValue={(Number(p.default_lo_split_pct ?? 0) * 100).toFixed(2)}
-                          onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { default_lo_split_pct: (Number(e.target.value) || 0) / 100 } })} />
-                      </td>
-                      <td className="px-4 py-2">
-                        <Input type="number" step="0.01" className="h-8 w-24" defaultValue={(Number(p.default_house_split_pct ?? 0) * 100).toFixed(2)}
-                          onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { default_house_split_pct: (Number(e.target.value) || 0) / 100 } })} />
+                      <td className="px-4 py-2 text-right">
+                        <Button size="sm" variant="outline" onClick={() => openPayoutFor(p.user_id)}>
+                          <Plus className="size-3 mr-1" /> Pay
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -160,6 +181,7 @@ function PayrollPage() {
                     <th className="px-4 py-2">Pay period</th>
                     <th className="px-4 py-2">Salary</th>
                     <th className="px-4 py-2">Draw</th>
+                    <th className="px-4 py-2">Status</th>
                     <th className="px-4 py-2">Paid on</th>
                     <th className="px-4 py-2">Notes</th>
                     <th></th>
@@ -172,16 +194,28 @@ function PayrollPage() {
                       <td className="px-4 py-2">{formatDate(p.pay_period)}</td>
                       <td className="px-4 py-2 font-mono">{formatCurrency(Number(p.salary_amount ?? 0))}</td>
                       <td className="px-4 py-2 font-mono">{formatCurrency(Number(p.draw_amount ?? 0))}</td>
+                      <td className="px-4 py-2">
+                        {p.paid_on ? (
+                          <span className="inline-block rounded px-2 py-0.5 text-xs bg-emerald-500/15 text-emerald-300">Paid</span>
+                        ) : (
+                          <span className="inline-block rounded px-2 py-0.5 text-xs bg-amber-500/15 text-amber-300">Pending</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2 text-muted-foreground">{formatDate(p.paid_on)}</td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">{p.notes ?? "—"}</td>
                       <td className="px-4 py-2 text-right">
-                        <Button size="icon" variant="ghost" onClick={() => removePayout.mutate(p.id)}>
-                          <Trash2 className="size-4 text-red-500" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          {!p.paid_on && (
+                            <Button size="sm" variant="outline" onClick={() => markPaid.mutate(p.id)}>Mark paid</Button>
+                          )}
+                          <Button size="icon" variant="ghost" onClick={() => removePayout.mutate(p.id)}>
+                            <Trash2 className="size-4 text-red-500" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  {payouts.length === 0 && <tr><td colSpan={7} className="text-center text-muted-foreground py-10">No payouts recorded.</td></tr>}
+                  {payouts.length === 0 && <tr><td colSpan={9} className="text-center text-muted-foreground py-10">No payouts recorded.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -200,16 +234,29 @@ function PayrollPage() {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Pay period (1st of month)</Label>
+              <div className="space-y-1"><Label>Pay period (period covered)</Label>
                 <Input type="date" value={form.pay_period} onChange={(e) => setForm({ ...form, pay_period: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Paid on</Label>
-                <Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Frequency</Label>
+                <Select value={form.frequency} onValueChange={(v) => setForm({ ...form, frequency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="semimonthly">Semi-Monthly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label>Salary ($)</Label>
                 <Input type="number" value={form.salary_amount} onChange={(e) => setForm({ ...form, salary_amount: e.target.value })} /></div>
               <div className="space-y-1"><Label>Draw ($)</Label>
                 <Input type="number" value={form.draw_amount} onChange={(e) => setForm({ ...form, draw_amount: e.target.value })} /></div>
+            </div>
+            <div className="space-y-1"><Label>Paid on</Label>
+              <Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} />
+              <p className="text-xs text-muted-foreground">Leave blank to record as Pending; mark paid later.</p>
             </div>
             <div className="space-y-1"><Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
