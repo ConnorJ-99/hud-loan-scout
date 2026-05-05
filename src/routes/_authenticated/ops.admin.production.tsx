@@ -94,7 +94,24 @@ function ProductionPage() {
 
   return (
     <div>
-      <OpsPageHeader title="Production reports" subtitle="Funded volume, commission, and profitability" />
+      <OpsPageHeader
+        title="Production reports"
+        subtitle="Funded volume, commission, and profitability"
+        actions={
+          <Button size="sm" variant="outline" onClick={() => {
+            const csv = toCsv(stats.byLo.map((r) => ({
+              loan_officer: r.userId === "unassigned" ? "Unassigned" : staffNameByUserId(profiles, r.userId),
+              loans: r.loanCount,
+              volume: r.volume.toFixed(2),
+              gross_commission: r.gross.toFixed(2),
+              lo_net: r.loNet.toFixed(2),
+            })));
+            downloadCsv(`production-by-lo-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+          }}>
+            <Download className="h-4 w-4 mr-1" /> Export CSV
+          </Button>
+        }
+      />
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Kpi title="Funded MTD" value={stats.mtd.count.toString()} sub={formatCurrency(stats.mtd.volume)} />
