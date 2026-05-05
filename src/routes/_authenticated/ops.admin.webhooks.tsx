@@ -20,7 +20,7 @@ const SOURCES = [
   { key: "zapier", label: "Zapier" },
   { key: "website", label: "Website Form" },
   { key: "zillow", label: "Zillow" },
-  { key: "generic", label: "Generic" },
+  { key: "other", label: "Generic / Other" },
 ];
 
 function genSecret() {
@@ -96,7 +96,7 @@ function WebhooksPage() {
           <CardHeader><CardTitle className="text-sm">Endpoint URLs</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {SOURCES.map((s) => {
-              const url = `${base}/api/public/webhooks/${s.key}`;
+              const url = `${base}/api/public/webhooks/leads/${s.key}`;
               return (
                 <div key={s.key}>
                   <Label className="text-xs">{s.label}</Label>
