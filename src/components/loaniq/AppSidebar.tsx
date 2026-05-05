@@ -42,8 +42,10 @@ const OPS_NAV: NavItem[] = [
 
 const OPS_ADMIN_NAV: NavItem[] = [
   { to: "/ops/admin/production", label: "Production", icon: TrendingUp },
+  { to: "/ops/admin/lead-sources", label: "Lead Source ROI", icon: Target },
   { to: "/ops/admin/expenses", label: "Expenses", icon: Receipt },
   { to: "/ops/admin/payroll", label: "Payroll", icon: Wallet },
+  { to: "/ops/admin/users", label: "Users & Roles", icon: UserCog },
   { to: "/ops/admin/webhooks", label: "Webhooks", icon: Webhook },
 ];
 
