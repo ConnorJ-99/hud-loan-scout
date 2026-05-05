@@ -29,7 +29,6 @@ const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/loan-search", label: "Loan Search", icon: Search },
   { to: "/income-analyzer", label: "Income Analyzer", icon: Calculator },
-  { to: "/borrowers", label: "Borrower Files", icon: Users },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
