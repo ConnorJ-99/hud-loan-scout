@@ -113,7 +113,8 @@ function ProductionPage() {
         }
       />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Kpi title="In pipeline" value={loans.filter((l) => !["funded", "lost"].includes(l.stage)).length.toString()} sub={formatCurrency(loans.filter((l) => !["funded", "lost"].includes(l.stage)).reduce((a, l) => a + Number(l.loan_amount ?? 0), 0))} />
           <Kpi title="Funded MTD" value={stats.mtd.count.toString()} sub={formatCurrency(stats.mtd.volume)} />
           <Kpi title="Funded YTD" value={stats.ytd.count.toString()} sub={formatCurrency(stats.ytd.volume)} />
           <Kpi title="House net YTD" value={formatCurrency(stats.ytd.house)} sub={`Gross ${formatCurrency(stats.ytd.gross)}`} />
