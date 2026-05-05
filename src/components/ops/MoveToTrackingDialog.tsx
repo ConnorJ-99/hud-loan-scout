@@ -66,10 +66,6 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
     const p = profiles.find((x) => x.user_id === v);
     const dflt = Number(p?.default_comp_pct ?? 0);
     if (dflt > 0) setCoPct((dflt * 100).toFixed(3));
-    const lo = Number(p?.default_lo_split_pct ?? 0);
-    const hs = Number(p?.default_house_split_pct ?? 0);
-    if (lo > 0) setLoSplit((lo * 100).toFixed(2));
-    if (hs > 0) setHouseSplit((hs * 100).toFixed(2));
   };
 
   const mutation = useMutation({
