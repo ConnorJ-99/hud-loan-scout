@@ -28,7 +28,22 @@ export const Route = createFileRoute("/_authenticated/ops/admin/payroll")({
 function PayrollPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", notes: "" });
+  const [form, setForm] = useState({ user_id: "", pay_period: "", salary_amount: "", draw_amount: "", paid_on: "", frequency: "monthly", notes: "" });
+  const today = new Date().toISOString().slice(0, 10);
+  const firstOfMonth = today.slice(0, 8) + "01";
+  const openPayoutFor = (user_id: string) => {
+    const p = profiles.find((x) => x.user_id === user_id);
+    setForm({
+      user_id,
+      pay_period: firstOfMonth,
+      salary_amount: p ? String(Number(p.monthly_salary ?? 0)) : "",
+      draw_amount: p ? String(Number(p.monthly_draw ?? 0)) : "",
+      paid_on: today,
+      frequency: "monthly",
+      notes: "",
+    });
+    setOpen(true);
+  };
 
   const { data: profiles = [] } = useQuery({ queryKey: ["ops-staff"], queryFn: () => fetchStaffProfiles("monthly_salary, monthly_draw, comp_plan") });
   const { data: payouts = [] } = useQuery({
