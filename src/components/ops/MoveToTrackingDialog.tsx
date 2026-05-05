@@ -176,9 +176,9 @@ export function MoveToTrackingDialog({ lead, open, onOpenChange }: {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1"><Label>LO Split (%)</Label>
-                  <Input type="number" min="0" max="100" step="0.01" value={loSplit} onChange={(e) => setLoSplit(e.target.value)} /></div>
+                  <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 70" value={loSplit} onChange={(e) => setLoSplit(e.target.value)} /></div>
                 <div className="space-y-1"><Label>House Split (%)</Label>
-                  <Input type="number" min="0" max="100" step="0.01" value={houseSplit} onChange={(e) => setHouseSplit(e.target.value)} /></div>
+                  <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 30" value={houseSplit} onChange={(e) => setHouseSplit(e.target.value)} /></div>
               </div>
               <p className="text-xs text-muted-foreground">Compensation fields are admin-only and locked once the loan is in tracking.</p>
             </>
