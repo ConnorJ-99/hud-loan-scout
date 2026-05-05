@@ -135,7 +135,7 @@ function PayrollPage() {
                     <th className="px-4 py-2">Plan</th>
                     <th className="px-4 py-2">Monthly salary</th>
                     <th className="px-4 py-2">Monthly draw</th>
-                    <th className="px-4 py-2">Pay frequency</th>
+                    <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -157,8 +157,10 @@ function PayrollPage() {
                         <Input type="number" className="h-8 w-32" defaultValue={Number(p.monthly_draw ?? 0)}
                           onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { monthly_draw: Number(e.target.value) || 0 } })} />
                       </td>
-                      <td className="px-4 py-2 text-xs text-muted-foreground">
-                        Set per payout below
+                      <td className="px-4 py-2 text-right">
+                        <Button size="sm" variant="outline" onClick={() => openPayoutFor(p.user_id)}>
+                          <Plus className="size-3 mr-1" /> Pay
+                        </Button>
                       </td>
                     </tr>
                   ))}
