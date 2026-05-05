@@ -16,7 +16,7 @@ import { NewLeadDialog } from "@/components/ops/NewLeadDialog";
 import { EditLeadDialog, type EditableLead } from "@/components/ops/EditLeadDialog";
 import { useAuth } from "@/lib/auth/useAuth";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/ops/leads")({
   component: LeadsPage,
