@@ -134,10 +134,19 @@ function ExpensesPage() {
                 <Input type="date" value={form.date_paid} onChange={(e) => setForm({ ...form, date_paid: e.target.value })} /></div>
             </div>
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="rec" checked={form.is_recurring} onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })} />
+              <input type="checkbox" id="rec" checked={form.is_recurring} onChange={(e) => setForm({ ...form, is_recurring: e.target.checked, recurrence: e.target.checked && !form.recurrence ? "monthly" : form.recurrence })} />
               <Label htmlFor="rec">Recurring</Label>
               {form.is_recurring && (
-                <Input className="ml-2" placeholder="monthly, weekly…" value={form.recurrence} onChange={(e) => setForm({ ...form, recurrence: e.target.value })} />
+                <Select value={form.recurrence || "monthly"} onValueChange={(v) => setForm({ ...form, recurrence: v })}>
+                  <SelectTrigger className="ml-2 w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
             </div>
             <div className="space-y-1"><Label>Notes</Label>
