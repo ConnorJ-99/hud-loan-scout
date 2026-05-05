@@ -30,6 +30,7 @@ import { Route as AuthenticatedOpsAdminWebhooksRouteImport } from './routes/_aut
 import { Route as AuthenticatedOpsAdminUsersRouteImport } from './routes/_authenticated/ops.admin.users'
 import { Route as AuthenticatedOpsAdminProductionRouteImport } from './routes/_authenticated/ops.admin.production'
 import { Route as AuthenticatedOpsAdminPayrollRouteImport } from './routes/_authenticated/ops.admin.payroll'
+import { Route as AuthenticatedOpsAdminLeadSourcesRouteImport } from './routes/_authenticated/ops.admin.lead-sources'
 import { Route as AuthenticatedOpsAdminExpensesRouteImport } from './routes/_authenticated/ops.admin.expenses'
 import { Route as ApiPublicWebhooksLeadsSourceRouteImport } from './routes/api/public/webhooks/leads.$source'
 
@@ -145,6 +146,12 @@ const AuthenticatedOpsAdminPayrollRoute =
     path: '/ops/admin/payroll',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOpsAdminLeadSourcesRoute =
+  AuthenticatedOpsAdminLeadSourcesRouteImport.update({
+    id: '/ops/admin/lead-sources',
+    path: '/ops/admin/lead-sources',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedOpsAdminExpensesRoute =
   AuthenticatedOpsAdminExpensesRouteImport.update({
     id: '/ops/admin/expenses',
@@ -174,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/income-analyzer/': typeof AuthenticatedIncomeAnalyzerIndexRoute
   '/ops/': typeof AuthenticatedOpsIndexRoute
   '/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
+  '/ops/admin/lead-sources': typeof AuthenticatedOpsAdminLeadSourcesRoute
   '/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
   '/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
   '/ops/admin/users': typeof AuthenticatedOpsAdminUsersRoute
@@ -198,6 +206,7 @@ export interface FileRoutesByTo {
   '/income-analyzer': typeof AuthenticatedIncomeAnalyzerIndexRoute
   '/ops': typeof AuthenticatedOpsIndexRoute
   '/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
+  '/ops/admin/lead-sources': typeof AuthenticatedOpsAdminLeadSourcesRoute
   '/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
   '/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
   '/ops/admin/users': typeof AuthenticatedOpsAdminUsersRoute
@@ -224,6 +233,7 @@ export interface FileRoutesById {
   '/_authenticated/income-analyzer/': typeof AuthenticatedIncomeAnalyzerIndexRoute
   '/_authenticated/ops/': typeof AuthenticatedOpsIndexRoute
   '/_authenticated/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
+  '/_authenticated/ops/admin/lead-sources': typeof AuthenticatedOpsAdminLeadSourcesRoute
   '/_authenticated/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
   '/_authenticated/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
   '/_authenticated/ops/admin/users': typeof AuthenticatedOpsAdminUsersRoute
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/income-analyzer/'
     | '/ops/'
     | '/ops/admin/expenses'
+    | '/ops/admin/lead-sources'
     | '/ops/admin/payroll'
     | '/ops/admin/production'
     | '/ops/admin/users'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/income-analyzer'
     | '/ops'
     | '/ops/admin/expenses'
+    | '/ops/admin/lead-sources'
     | '/ops/admin/payroll'
     | '/ops/admin/production'
     | '/ops/admin/users'
@@ -299,6 +311,7 @@ export interface FileRouteTypes {
     | '/_authenticated/income-analyzer/'
     | '/_authenticated/ops/'
     | '/_authenticated/ops/admin/expenses'
+    | '/_authenticated/ops/admin/lead-sources'
     | '/_authenticated/ops/admin/payroll'
     | '/_authenticated/ops/admin/production'
     | '/_authenticated/ops/admin/users'
@@ -463,6 +476,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOpsAdminPayrollRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/ops/admin/lead-sources': {
+      id: '/_authenticated/ops/admin/lead-sources'
+      path: '/ops/admin/lead-sources'
+      fullPath: '/ops/admin/lead-sources'
+      preLoaderRoute: typeof AuthenticatedOpsAdminLeadSourcesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/ops/admin/expenses': {
       id: '/_authenticated/ops/admin/expenses'
       path: '/ops/admin/expenses'
@@ -521,6 +541,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIncomeAnalyzerIndexRoute: typeof AuthenticatedIncomeAnalyzerIndexRoute
   AuthenticatedOpsIndexRoute: typeof AuthenticatedOpsIndexRoute
   AuthenticatedOpsAdminExpensesRoute: typeof AuthenticatedOpsAdminExpensesRoute
+  AuthenticatedOpsAdminLeadSourcesRoute: typeof AuthenticatedOpsAdminLeadSourcesRoute
   AuthenticatedOpsAdminPayrollRoute: typeof AuthenticatedOpsAdminPayrollRoute
   AuthenticatedOpsAdminProductionRoute: typeof AuthenticatedOpsAdminProductionRoute
   AuthenticatedOpsAdminUsersRoute: typeof AuthenticatedOpsAdminUsersRoute
@@ -542,6 +563,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIncomeAnalyzerIndexRoute: AuthenticatedIncomeAnalyzerIndexRoute,
   AuthenticatedOpsIndexRoute: AuthenticatedOpsIndexRoute,
   AuthenticatedOpsAdminExpensesRoute: AuthenticatedOpsAdminExpensesRoute,
+  AuthenticatedOpsAdminLeadSourcesRoute: AuthenticatedOpsAdminLeadSourcesRoute,
   AuthenticatedOpsAdminPayrollRoute: AuthenticatedOpsAdminPayrollRoute,
   AuthenticatedOpsAdminProductionRoute: AuthenticatedOpsAdminProductionRoute,
   AuthenticatedOpsAdminUsersRoute: AuthenticatedOpsAdminUsersRoute,
