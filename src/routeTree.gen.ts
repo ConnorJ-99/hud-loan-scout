@@ -24,7 +24,13 @@ import { Route as AuthenticatedOpsLoansRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedOpsLeadsRouteImport } from './routes/_authenticated/ops.leads'
 import { Route as AuthenticatedIncomeAnalyzerIdRouteImport } from './routes/_authenticated/income-analyzer.$id'
 import { Route as AuthenticatedBorrowersIdRouteImport } from './routes/_authenticated/borrowers.$id'
+import { Route as AuthenticatedOpsLoansIdRouteImport } from './routes/_authenticated/ops.loans.$id'
+import { Route as AuthenticatedOpsLeadsIdRouteImport } from './routes/_authenticated/ops.leads.$id'
 import { Route as AuthenticatedOpsAdminWebhooksRouteImport } from './routes/_authenticated/ops.admin.webhooks'
+import { Route as AuthenticatedOpsAdminProductionRouteImport } from './routes/_authenticated/ops.admin.production'
+import { Route as AuthenticatedOpsAdminPayrollRouteImport } from './routes/_authenticated/ops.admin.payroll'
+import { Route as AuthenticatedOpsAdminExpensesRouteImport } from './routes/_authenticated/ops.admin.expenses'
+import { Route as ApiPublicWebhooksLeadsSourceRouteImport } from './routes/api/public/webhooks/leads.$source'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -104,11 +110,45 @@ const AuthenticatedBorrowersIdRoute =
     path: '/borrowers/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOpsLoansIdRoute = AuthenticatedOpsLoansIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedOpsLoansRoute,
+} as any)
+const AuthenticatedOpsLeadsIdRoute = AuthenticatedOpsLeadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedOpsLeadsRoute,
+} as any)
 const AuthenticatedOpsAdminWebhooksRoute =
   AuthenticatedOpsAdminWebhooksRouteImport.update({
     id: '/ops/admin/webhooks',
     path: '/ops/admin/webhooks',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOpsAdminProductionRoute =
+  AuthenticatedOpsAdminProductionRouteImport.update({
+    id: '/ops/admin/production',
+    path: '/ops/admin/production',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOpsAdminPayrollRoute =
+  AuthenticatedOpsAdminPayrollRouteImport.update({
+    id: '/ops/admin/payroll',
+    path: '/ops/admin/payroll',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOpsAdminExpensesRoute =
+  AuthenticatedOpsAdminExpensesRouteImport.update({
+    id: '/ops/admin/expenses',
+    path: '/ops/admin/expenses',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const ApiPublicWebhooksLeadsSourceRoute =
+  ApiPublicWebhooksLeadsSourceRouteImport.update({
+    id: '/api/public/webhooks/leads/$source',
+    path: '/api/public/webhooks/leads/$source',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -121,12 +161,18 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
   '/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
-  '/ops/leads': typeof AuthenticatedOpsLeadsRoute
-  '/ops/loans': typeof AuthenticatedOpsLoansRoute
+  '/ops/leads': typeof AuthenticatedOpsLeadsRouteWithChildren
+  '/ops/loans': typeof AuthenticatedOpsLoansRouteWithChildren
   '/borrowers/': typeof AuthenticatedBorrowersIndexRoute
   '/income-analyzer/': typeof AuthenticatedIncomeAnalyzerIndexRoute
   '/ops/': typeof AuthenticatedOpsIndexRoute
+  '/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
+  '/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
+  '/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
   '/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
+  '/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
+  '/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
+  '/api/public/webhooks/leads/$source': typeof ApiPublicWebhooksLeadsSourceRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -138,12 +184,18 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
   '/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
-  '/ops/leads': typeof AuthenticatedOpsLeadsRoute
-  '/ops/loans': typeof AuthenticatedOpsLoansRoute
+  '/ops/leads': typeof AuthenticatedOpsLeadsRouteWithChildren
+  '/ops/loans': typeof AuthenticatedOpsLoansRouteWithChildren
   '/borrowers': typeof AuthenticatedBorrowersIndexRoute
   '/income-analyzer': typeof AuthenticatedIncomeAnalyzerIndexRoute
   '/ops': typeof AuthenticatedOpsIndexRoute
+  '/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
+  '/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
+  '/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
   '/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
+  '/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
+  '/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
+  '/api/public/webhooks/leads/$source': typeof ApiPublicWebhooksLeadsSourceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,12 +209,18 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
   '/_authenticated/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
-  '/_authenticated/ops/leads': typeof AuthenticatedOpsLeadsRoute
-  '/_authenticated/ops/loans': typeof AuthenticatedOpsLoansRoute
+  '/_authenticated/ops/leads': typeof AuthenticatedOpsLeadsRouteWithChildren
+  '/_authenticated/ops/loans': typeof AuthenticatedOpsLoansRouteWithChildren
   '/_authenticated/borrowers/': typeof AuthenticatedBorrowersIndexRoute
   '/_authenticated/income-analyzer/': typeof AuthenticatedIncomeAnalyzerIndexRoute
   '/_authenticated/ops/': typeof AuthenticatedOpsIndexRoute
+  '/_authenticated/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
+  '/_authenticated/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
+  '/_authenticated/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
   '/_authenticated/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
+  '/_authenticated/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
+  '/_authenticated/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
+  '/api/public/webhooks/leads/$source': typeof ApiPublicWebhooksLeadsSourceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,7 +239,13 @@ export interface FileRouteTypes {
     | '/borrowers/'
     | '/income-analyzer/'
     | '/ops/'
+    | '/ops/admin/expenses'
+    | '/ops/admin/payroll'
+    | '/ops/admin/production'
     | '/ops/admin/webhooks'
+    | '/ops/leads/$id'
+    | '/ops/loans/$id'
+    | '/api/public/webhooks/leads/$source'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -198,7 +262,13 @@ export interface FileRouteTypes {
     | '/borrowers'
     | '/income-analyzer'
     | '/ops'
+    | '/ops/admin/expenses'
+    | '/ops/admin/payroll'
+    | '/ops/admin/production'
     | '/ops/admin/webhooks'
+    | '/ops/leads/$id'
+    | '/ops/loans/$id'
+    | '/api/public/webhooks/leads/$source'
   id:
     | '__root__'
     | '/_authenticated'
@@ -216,12 +286,19 @@ export interface FileRouteTypes {
     | '/_authenticated/borrowers/'
     | '/_authenticated/income-analyzer/'
     | '/_authenticated/ops/'
+    | '/_authenticated/ops/admin/expenses'
+    | '/_authenticated/ops/admin/payroll'
+    | '/_authenticated/ops/admin/production'
     | '/_authenticated/ops/admin/webhooks'
+    | '/_authenticated/ops/leads/$id'
+    | '/_authenticated/ops/loans/$id'
+    | '/api/public/webhooks/leads/$source'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicWebhooksLeadsSourceRoute: typeof ApiPublicWebhooksLeadsSourceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -331,6 +408,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBorrowersIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/ops/loans/$id': {
+      id: '/_authenticated/ops/loans/$id'
+      path: '/$id'
+      fullPath: '/ops/loans/$id'
+      preLoaderRoute: typeof AuthenticatedOpsLoansIdRouteImport
+      parentRoute: typeof AuthenticatedOpsLoansRoute
+    }
+    '/_authenticated/ops/leads/$id': {
+      id: '/_authenticated/ops/leads/$id'
+      path: '/$id'
+      fullPath: '/ops/leads/$id'
+      preLoaderRoute: typeof AuthenticatedOpsLeadsIdRouteImport
+      parentRoute: typeof AuthenticatedOpsLeadsRoute
+    }
     '/_authenticated/ops/admin/webhooks': {
       id: '/_authenticated/ops/admin/webhooks'
       path: '/ops/admin/webhooks'
@@ -338,8 +429,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOpsAdminWebhooksRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/ops/admin/production': {
+      id: '/_authenticated/ops/admin/production'
+      path: '/ops/admin/production'
+      fullPath: '/ops/admin/production'
+      preLoaderRoute: typeof AuthenticatedOpsAdminProductionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ops/admin/payroll': {
+      id: '/_authenticated/ops/admin/payroll'
+      path: '/ops/admin/payroll'
+      fullPath: '/ops/admin/payroll'
+      preLoaderRoute: typeof AuthenticatedOpsAdminPayrollRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ops/admin/expenses': {
+      id: '/_authenticated/ops/admin/expenses'
+      path: '/ops/admin/expenses'
+      fullPath: '/ops/admin/expenses'
+      preLoaderRoute: typeof AuthenticatedOpsAdminExpensesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/webhooks/leads/$source': {
+      id: '/api/public/webhooks/leads/$source'
+      path: '/api/public/webhooks/leads/$source'
+      fullPath: '/api/public/webhooks/leads/$source'
+      preLoaderRoute: typeof ApiPublicWebhooksLeadsSourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface AuthenticatedOpsLeadsRouteChildren {
+  AuthenticatedOpsLeadsIdRoute: typeof AuthenticatedOpsLeadsIdRoute
+}
+
+const AuthenticatedOpsLeadsRouteChildren: AuthenticatedOpsLeadsRouteChildren = {
+  AuthenticatedOpsLeadsIdRoute: AuthenticatedOpsLeadsIdRoute,
+}
+
+const AuthenticatedOpsLeadsRouteWithChildren =
+  AuthenticatedOpsLeadsRoute._addFileChildren(
+    AuthenticatedOpsLeadsRouteChildren,
+  )
+
+interface AuthenticatedOpsLoansRouteChildren {
+  AuthenticatedOpsLoansIdRoute: typeof AuthenticatedOpsLoansIdRoute
+}
+
+const AuthenticatedOpsLoansRouteChildren: AuthenticatedOpsLoansRouteChildren = {
+  AuthenticatedOpsLoansIdRoute: AuthenticatedOpsLoansIdRoute,
+}
+
+const AuthenticatedOpsLoansRouteWithChildren =
+  AuthenticatedOpsLoansRoute._addFileChildren(
+    AuthenticatedOpsLoansRouteChildren,
+  )
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
@@ -350,11 +495,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBorrowersIdRoute: typeof AuthenticatedBorrowersIdRoute
   AuthenticatedIncomeAnalyzerIdRoute: typeof AuthenticatedIncomeAnalyzerIdRoute
-  AuthenticatedOpsLeadsRoute: typeof AuthenticatedOpsLeadsRoute
-  AuthenticatedOpsLoansRoute: typeof AuthenticatedOpsLoansRoute
+  AuthenticatedOpsLeadsRoute: typeof AuthenticatedOpsLeadsRouteWithChildren
+  AuthenticatedOpsLoansRoute: typeof AuthenticatedOpsLoansRouteWithChildren
   AuthenticatedBorrowersIndexRoute: typeof AuthenticatedBorrowersIndexRoute
   AuthenticatedIncomeAnalyzerIndexRoute: typeof AuthenticatedIncomeAnalyzerIndexRoute
   AuthenticatedOpsIndexRoute: typeof AuthenticatedOpsIndexRoute
+  AuthenticatedOpsAdminExpensesRoute: typeof AuthenticatedOpsAdminExpensesRoute
+  AuthenticatedOpsAdminPayrollRoute: typeof AuthenticatedOpsAdminPayrollRoute
+  AuthenticatedOpsAdminProductionRoute: typeof AuthenticatedOpsAdminProductionRoute
   AuthenticatedOpsAdminWebhooksRoute: typeof AuthenticatedOpsAdminWebhooksRoute
 }
 
@@ -367,11 +515,14 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBorrowersIdRoute: AuthenticatedBorrowersIdRoute,
   AuthenticatedIncomeAnalyzerIdRoute: AuthenticatedIncomeAnalyzerIdRoute,
-  AuthenticatedOpsLeadsRoute: AuthenticatedOpsLeadsRoute,
-  AuthenticatedOpsLoansRoute: AuthenticatedOpsLoansRoute,
+  AuthenticatedOpsLeadsRoute: AuthenticatedOpsLeadsRouteWithChildren,
+  AuthenticatedOpsLoansRoute: AuthenticatedOpsLoansRouteWithChildren,
   AuthenticatedBorrowersIndexRoute: AuthenticatedBorrowersIndexRoute,
   AuthenticatedIncomeAnalyzerIndexRoute: AuthenticatedIncomeAnalyzerIndexRoute,
   AuthenticatedOpsIndexRoute: AuthenticatedOpsIndexRoute,
+  AuthenticatedOpsAdminExpensesRoute: AuthenticatedOpsAdminExpensesRoute,
+  AuthenticatedOpsAdminPayrollRoute: AuthenticatedOpsAdminPayrollRoute,
+  AuthenticatedOpsAdminProductionRoute: AuthenticatedOpsAdminProductionRoute,
   AuthenticatedOpsAdminWebhooksRoute: AuthenticatedOpsAdminWebhooksRoute,
 }
 
@@ -382,6 +533,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicWebhooksLeadsSourceRoute: ApiPublicWebhooksLeadsSourceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
