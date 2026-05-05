@@ -66,6 +66,15 @@ function ExpensesPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops-expenses"] }),
   });
 
+  const updateExpense = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+      const { error } = await supabase.from("expenses").update(patch as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ops-expenses"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div>
       <OpsPageHeader
