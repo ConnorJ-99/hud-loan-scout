@@ -223,6 +223,16 @@ function LeadsPage() {
                             Move to Tracking
                           </Button>
                         )}
+                        {isAdmin && (
+                          <Button variant="ghost" size="icon" title="Delete"
+                            onClick={() => {
+                              if (confirm(`Delete lead "${l.name}"? This cannot be undone.`)) {
+                                deleteLeads.mutate([l.id]);
+                              }
+                            }}>
+                            <Trash2 className="size-4 text-red-500" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
