@@ -19,12 +19,34 @@ export const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
   { value: "moved_to_tracking", label: "Moved to Tracking" },
 ];
 
+// Full enum (used for read/labeling — includes legacy webhook-only sources)
 export const LEAD_SOURCES: { value: LeadSource; label: string }[] = [
-  { value: "ghl", label: "GoHighLevel" },
-  { value: "zapier", label: "Zapier" },
-  { value: "website", label: "Website" },
   { value: "zillow", label: "Zillow" },
+  { value: "website", label: "Website" },
+  { value: "realtor", label: "Realtor" },
+  { value: "referral", label: "Referral" },
   { value: "other", label: "Other" },
+  { value: "ghl", label: "GoHighLevel (webhook)" },
+  { value: "zapier", label: "Zapier (webhook)" },
+];
+
+// Sources that humans can pick in dropdowns (webhook-only sources excluded)
+export const MANUAL_LEAD_SOURCES: { value: LeadSource; label: string }[] = [
+  { value: "zillow", label: "Zillow" },
+  { value: "website", label: "Website" },
+  { value: "realtor", label: "Realtor" },
+  { value: "referral", label: "Referral" },
+  { value: "other", label: "Other" },
+];
+
+export const LOAN_TYPES: { value: string; label: string }[] = [
+  { value: "Conventional", label: "Conventional" },
+  { value: "FHA", label: "FHA" },
+  { value: "VA", label: "VA" },
+  { value: "DSCR", label: "DSCR" },
+  { value: "Jumbo", label: "Jumbo" },
+  { value: "Refinance", label: "Refinance" },
+  { value: "Other", label: "Other" },
 ];
 
 export const LOAN_STAGES: { value: LoanStage; label: string }[] = [
