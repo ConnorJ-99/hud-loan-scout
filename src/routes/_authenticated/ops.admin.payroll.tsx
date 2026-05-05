@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchStaffProfiles, staffName, staffNameByUserId } from "@/lib/ops/profiles";
 import { COMP_PLANS, formatCurrency, formatDate, labelFor, type CompPlan } from "@/lib/ops/loan-helpers";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
+import { downloadCsv, toCsv } from "@/lib/ops/csv";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/ops/admin/payroll")({
