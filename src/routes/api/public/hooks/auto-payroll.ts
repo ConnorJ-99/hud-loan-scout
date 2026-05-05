@@ -88,7 +88,8 @@ export const Route = createFileRoute("/api/public/hooks/auto-payroll")({
             continue;
           }
 
-          const period = periodStartFor(freq, p.pay_day ?? null, today);
+          const payDay = typeof p.pay_day === "number" ? p.pay_day : p.pay_day != null ? Number(p.pay_day) || null : null;
+          const period = periodStartFor(freq, payDay, today);
           if (!period) {
             skipped.push({ user_id: p.user_id, reason: "no_period" });
             continue;
