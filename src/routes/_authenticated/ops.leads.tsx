@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LEAD_STATUSES, LEAD_SOURCES, formatDate, labelFor, leadStatusBadgeClass, type LeadStatus, type LeadSource } from "@/lib/ops/loan-helpers";
+import { LEAD_STATUSES, LEAD_SOURCES, formatCurrency, formatDate, labelFor, leadStatusBadgeClass, type LeadStatus, type LeadSource } from "@/lib/ops/loan-helpers";
 import { fetchStaffProfiles, staffNameByUserId } from "@/lib/ops/profiles";
 import { MoveToTrackingDialog } from "@/components/ops/MoveToTrackingDialog";
 import { NewLeadDialog } from "@/components/ops/NewLeadDialog";
+import { EditLeadDialog, type EditableLead } from "@/components/ops/EditLeadDialog";
 import { useAuth } from "@/lib/auth/useAuth";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/ops/leads")({
   component: LeadsPage,
