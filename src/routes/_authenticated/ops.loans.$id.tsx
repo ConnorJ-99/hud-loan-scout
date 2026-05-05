@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,13 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LoanFeesEditor } from "@/components/ops/LoanFeesEditor";
 import { fetchStaffProfiles, staffName, staffNameByUserId } from "@/lib/ops/profiles";
 import {
   COMP_MODES, LOAN_STAGES, LOAN_TYPES, computeBreakdown, formatCurrency, formatDate,
   labelFor, loanStageBadgeClass, type CompMode, type LoanStage,
 } from "@/lib/ops/loan-helpers";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/ops/loans/$id")({
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/ops/loans/$id")({
 
 function LoanDetail() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
 
@@ -82,6 +84,19 @@ function LoanDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteLoan = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("loans").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Loan deleted");
+      qc.invalidateQueries({ queryKey: ["ops-loans"] });
+      navigate({ to: "/ops/loans" });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading…</div>;
   if (!loan) return <div className="p-6 text-muted-foreground">Loan not found.</div>;
 
@@ -106,196 +121,213 @@ function LoanDetail() {
     <div>
       <OpsPageHeader
         title={loan.borrower_name}
-        subtitle={`${loan.loan_type || "—"} • ${formatCurrency(Number(loan.loan_amount ?? 0))}`}
+        subtitle={`${loan.loan_type || "—"} • ${formatCurrency(Number(loan.loan_amount ?? 0))} • ${labelFor(LOAN_STAGES, loan.stage)}`}
         actions={
-          <Link to="/ops/loans" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-            <ArrowLeft className="size-4" /> Back
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/ops/loans" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+              <ArrowLeft className="size-4" /> Back
+            </Link>
+            {isAdmin && (
+              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-400"
+                onClick={() => { if (confirm(`Delete this loan? This cannot be undone.`)) deleteLoan.mutate(); }}
+                disabled={deleteLoan.isPending}>
+                <Trash2 className="size-4 mr-1" /> Delete
+              </Button>
+            )}
+          </div>
         }
       />
-      <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader><CardTitle>Loan</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Borrower">
-                <Input disabled={!canEdit} defaultValue={loan.borrower_name}
-                  onBlur={(e) => e.target.value !== loan.borrower_name && update.mutate({ borrower_name: e.target.value })} />
-              </Field>
-              <Field label="Loan type">
-                <Select disabled={!canEdit} value={loan.loan_type ?? "__none"}
-                  onValueChange={(v) => update.mutate({ loan_type: v === "__none" ? null : v })}>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">—</SelectItem>
-                    {LOAN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Loan amount ($)">
-                <Input disabled={!canEdit} type="number" defaultValue={Number(loan.loan_amount ?? 0)}
-                  onBlur={(e) => update.mutate({ loan_amount: Number(e.target.value) || 0 })} />
-              </Field>
-              <Field label="Stage">
-                <Select disabled={!canEdit} value={loan.stage}
-                  onValueChange={(v) => update.mutate({ stage: v as LoanStage })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {LOAN_STAGES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <span className={`mt-2 inline-block rounded px-2 py-0.5 text-xs ${loanStageBadgeClass(loan.stage)}`}>
-                  {labelFor(LOAN_STAGES, loan.stage)}
-                </span>
-              </Field>
-              <Field label="Assigned loan officer">
-                <Select disabled={!isAdmin} value={loan.assigned_lo ?? "__none"}
-                  onValueChange={(v) => update.mutate({ assigned_lo: v === "__none" ? null : v })}>
-                  <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Unassigned</SelectItem>
-                    {profiles.map((p) => <SelectItem key={p.user_id} value={p.user_id}>{staffName(p)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Expected close">
-                <Input disabled={!canEdit} type="date" defaultValue={loan.expected_close_date ?? ""}
-                  onBlur={(e) => update.mutate({ expected_close_date: e.target.value || null })} />
-              </Field>
-              <Field label="Actual close">
-                <Input disabled={!canEdit} type="date" defaultValue={loan.actual_close_date ?? ""}
-                  onBlur={(e) => update.mutate({ actual_close_date: e.target.value || null })} />
-              </Field>
-              <Field label="Borrower phone">
-                <Input disabled={!canEdit} defaultValue={loan.borrower_phone ?? ""}
-                  onBlur={(e) => update.mutate({ borrower_phone: e.target.value || null })} />
-              </Field>
-              <Field label="Borrower email">
-                <Input disabled={!canEdit} defaultValue={loan.borrower_email ?? ""}
-                  onBlur={(e) => update.mutate({ borrower_email: e.target.value || null })} />
-              </Field>
-              <Field label="Purchase price ($)">
-                <Input disabled={!canEdit} type="number" defaultValue={Number(loan.purchase_price ?? 0)}
-                  onBlur={(e) => update.mutate({ purchase_price: e.target.value === "" ? null : Number(e.target.value) })} />
-              </Field>
-              <Field label="Interest rate (%)">
-                <Input disabled={!canEdit} type="number" step="0.001" defaultValue={Number(loan.interest_rate ?? 0)}
-                  onBlur={(e) => update.mutate({ interest_rate: e.target.value === "" ? null : Number(e.target.value) })} />
-              </Field>
-              <Field label="Realtor name">
-                <Input disabled={!canEdit} defaultValue={loan.realtor_name ?? ""}
-                  onBlur={(e) => update.mutate({ realtor_name: e.target.value || null })} />
-              </Field>
-              <Field label="Realtor phone">
-                <Input disabled={!canEdit} defaultValue={loan.realtor_phone ?? ""}
-                  onBlur={(e) => update.mutate({ realtor_phone: e.target.value || null })} />
-              </Field>
-              <Field label="Realtor email">
-                <Input disabled={!canEdit} defaultValue={loan.realtor_email ?? ""}
-                  onBlur={(e) => update.mutate({ realtor_email: e.target.value || null })} />
-              </Field>
-            </CardContent>
-          </Card>
+      <div className="p-6">
+        <Tabs defaultValue="loan" className="w-full">
+          <TabsList>
+            <TabsTrigger value="loan">Loan</TabsTrigger>
+            <TabsTrigger value="borrower">Borrower</TabsTrigger>
+            <TabsTrigger value="comp">Compensation</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Compensation {!isAdmin && <span className="text-xs text-muted-foreground font-normal">(admin-only)</span>}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Comp mode">
-                  <Select disabled={!canEdit} value={loan.comp_mode}
-                    onValueChange={(v) => update.mutate({ comp_mode: v as CompMode })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+          <TabsContent value="loan" className="mt-4">
+            <Card>
+              <CardHeader><CardTitle>Loan details</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Borrower">
+                  <Input disabled={!canEdit} defaultValue={loan.borrower_name}
+                    onBlur={(e) => e.target.value !== loan.borrower_name && update.mutate({ borrower_name: e.target.value })} />
+                </Field>
+                <Field label="Loan type">
+                  <Select disabled={!canEdit} value={loan.loan_type ?? "__none"}
+                    onValueChange={(v) => update.mutate({ loan_type: v === "__none" ? null : v })}>
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      {COMP_MODES.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                      <SelectItem value="__none">—</SelectItem>
+                      {LOAN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </Field>
-                {loan.comp_mode === "flat" ? (
-                  <Field label="Flat comp ($)">
-                    <Input disabled={!canEdit} type="number" defaultValue={Number(loan.comp_flat_amount ?? 0)}
-                      onBlur={(e) => update.mutate({ comp_flat_amount: Number(e.target.value) || 0 })} />
+                <Field label="Loan amount ($)">
+                  <Input disabled={!canEdit} type="number" defaultValue={Number(loan.loan_amount ?? 0)}
+                    onBlur={(e) => update.mutate({ loan_amount: Number(e.target.value) || 0 })} />
+                </Field>
+                <Field label="Stage">
+                  <Select disabled={!canEdit} value={loan.stage}
+                    onValueChange={(v) => update.mutate({ stage: v as LoanStage })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {LOAN_STAGES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <span className={`mt-2 inline-block rounded px-2 py-0.5 text-xs ${loanStageBadgeClass(loan.stage)}`}>
+                    {labelFor(LOAN_STAGES, loan.stage)}
+                  </span>
+                </Field>
+                <Field label="Assigned loan officer">
+                  <Select disabled={!isAdmin} value={loan.assigned_lo ?? "__none"}
+                    onValueChange={(v) => update.mutate({ assigned_lo: v === "__none" ? null : v })}>
+                    <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Unassigned</SelectItem>
+                      {profiles.map((p) => <SelectItem key={p.user_id} value={p.user_id}>{staffName(p)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Expected close">
+                  <Input disabled={!canEdit} type="date" defaultValue={loan.expected_close_date ?? ""}
+                    onBlur={(e) => update.mutate({ expected_close_date: e.target.value || null })} />
+                </Field>
+                <Field label="Actual close">
+                  <Input disabled={!canEdit} type="date" defaultValue={loan.actual_close_date ?? ""}
+                    onBlur={(e) => update.mutate({ actual_close_date: e.target.value || null })} />
+                </Field>
+                <Field label="Purchase price ($)">
+                  <Input disabled={!canEdit} type="number" defaultValue={Number(loan.purchase_price ?? 0)}
+                    onBlur={(e) => update.mutate({ purchase_price: e.target.value === "" ? null : Number(e.target.value) })} />
+                </Field>
+                <Field label="Interest rate (%)">
+                  <Input disabled={!canEdit} type="number" step="0.001" defaultValue={Number(loan.interest_rate ?? 0)}
+                    onBlur={(e) => update.mutate({ interest_rate: e.target.value === "" ? null : Number(e.target.value) })} />
+                </Field>
+                <Field label="Realtor name">
+                  <Input disabled={!canEdit} defaultValue={loan.realtor_name ?? ""}
+                    onBlur={(e) => update.mutate({ realtor_name: e.target.value || null })} />
+                </Field>
+                <Field label="Realtor phone">
+                  <Input disabled={!canEdit} defaultValue={loan.realtor_phone ?? ""}
+                    onBlur={(e) => update.mutate({ realtor_phone: e.target.value || null })} />
+                </Field>
+                <Field label="Realtor email">
+                  <Input disabled={!canEdit} defaultValue={loan.realtor_email ?? ""}
+                    onBlur={(e) => update.mutate({ realtor_email: e.target.value || null })} />
+                </Field>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="borrower" className="mt-4">
+            <BorrowerTab loan={loan} userId={user?.id} canEdit={!!canEdit} />
+          </TabsContent>
+
+          <TabsContent value="comp" className="mt-4 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Compensation {!isAdmin && <span className="text-xs text-muted-foreground font-normal">(admin-only edits)</span>}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Field label="Comp mode">
+                    <Select disabled={!canEdit} value={loan.comp_mode}
+                      onValueChange={(v) => update.mutate({ comp_mode: v as CompMode })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {COMP_MODES.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </Field>
-                ) : (
-                  <Field label="Comp points (%)">
-                    <Input disabled={!canEdit} type="number" step="0.01" defaultValue={Number(loan.comp_points ?? 0)}
-                      onBlur={(e) => update.mutate({ comp_points: Number(e.target.value) || 0, lo_comp_pct: (Number(e.target.value) || 0) / 100 })} />
+                  {loan.comp_mode === "flat" ? (
+                    <Field label="Flat comp ($)">
+                      <Input disabled={!canEdit} type="number" defaultValue={Number(loan.comp_flat_amount ?? 0)}
+                        onBlur={(e) => update.mutate({ comp_flat_amount: Number(e.target.value) || 0 })} />
+                    </Field>
+                  ) : (
+                    <Field label="Comp points (%)">
+                      <Input disabled={!canEdit} type="number" step="0.01" defaultValue={Number(loan.comp_points ?? 0)}
+                        onBlur={(e) => update.mutate({ comp_points: Number(e.target.value) || 0, lo_comp_pct: (Number(e.target.value) || 0) / 100 })} />
+                    </Field>
+                  )}
+                  <Field label="Gross commission">
+                    <div className="h-10 flex items-center font-mono text-sm">{formatCurrency(breakdown.grossCommission)}</div>
                   </Field>
-                )}
-                <Field label="Gross commission">
-                  <div className="h-10 flex items-center font-mono text-sm">{formatCurrency(breakdown.grossCommission)}</div>
-                </Field>
-                <Field label="LO Split (%)">
-                  <Input disabled={!canEdit} type="number" step="0.01"
-                    defaultValue={(Number(loan.lo_split_pct ?? 0) * 100).toFixed(2)}
-                    onBlur={(e) => update.mutate({ lo_split_pct: (Number(e.target.value) || 0) / 100 })} />
-                </Field>
-                <Field label="House Split (%)">
-                  <Input disabled={!canEdit} type="number" step="0.01"
-                    defaultValue={(Number(loan.house_split_pct ?? 0) * 100).toFixed(2)}
-                    onBlur={(e) => update.mutate({ house_split_pct: (Number(e.target.value) || 0) / 100 })} />
-                </Field>
-              </div>
+                  <Field label="LO Split (%)">
+                    <Input disabled={!canEdit} type="number" step="0.01"
+                      defaultValue={(Number(loan.lo_split_pct ?? 0) * 100).toFixed(2)}
+                      onBlur={(e) => update.mutate({ lo_split_pct: (Number(e.target.value) || 0) / 100 })} />
+                  </Field>
+                  <Field label="House Split (%)">
+                    <Input disabled={!canEdit} type="number" step="0.01"
+                      defaultValue={(Number(loan.house_split_pct ?? 0) * 100).toFixed(2)}
+                      onBlur={(e) => update.mutate({ house_split_pct: (Number(e.target.value) || 0) / 100 })} />
+                  </Field>
+                </div>
 
-              <div className="rounded-md border border-border bg-panel/40 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <Stat label="Gross" value={formatCurrency(breakdown.grossCommission)} />
-                <Stat label="LO before fees" value={formatCurrency(breakdown.loBeforeFees)} />
-                <Stat label="House before fees" value={formatCurrency(breakdown.houseBeforeFees)} />
-                <Stat label="Total fees" value={formatCurrency(breakdown.totalFees)} />
-                <Stat label="LO net" value={formatCurrency(breakdown.loNet)} accent />
-                <Stat label="House net" value={formatCurrency(breakdown.houseNet)} accent />
-              </div>
-            </CardContent>
-          </Card>
+                <div className="rounded-md border border-border bg-panel/40 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <Stat label="Gross" value={formatCurrency(breakdown.grossCommission)} />
+                  <Stat label="LO before fees" value={formatCurrency(breakdown.loBeforeFees)} />
+                  <Stat label="House before fees" value={formatCurrency(breakdown.houseBeforeFees)} />
+                  <Stat label="Total fees" value={formatCurrency(breakdown.totalFees)} />
+                  <Stat label="LO net" value={formatCurrency(breakdown.loNet)} accent />
+                  <Stat label="House net" value={formatCurrency(breakdown.houseNet)} accent />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader><CardTitle>Fees & referrals</CardTitle></CardHeader>
-            <CardContent>
-              <LoanFeesEditor loanId={id} gross={breakdown.grossCommission} canEdit={!!canEdit} />
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader><CardTitle>Fees & referrals</CardTitle></CardHeader>
+              <CardContent>
+                <LoanFeesEditor loanId={id} gross={breakdown.grossCommission} canEdit={!!canEdit} />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <div className="space-y-6">
-          <BorrowerFileCard loan={loan} userId={user?.id} canEdit={!!canEdit} onLinked={() => qc.invalidateQueries({ queryKey: ["ops-loan", id] })} />
-
-          <Card>
-            <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Textarea rows={3} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add a note…" />
-              <Button size="sm" disabled={!noteDraft.trim() || addNote.isPending} onClick={() => addNote.mutate()}>
-                {addNote.isPending ? "Saving…" : "Add note"}
-              </Button>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {notes.map((n) => (
-                  <div key={n.id} className="rounded-md border border-border bg-panel/30 p-2 text-sm">
-                    <div className="text-xs text-muted-foreground">
-                      {staffNameByUserId(profiles, n.author_id)} • {formatDate(n.created_at)}
+          <TabsContent value="notes" className="mt-4">
+            <Card>
+              <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea rows={3} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Add a note…" />
+                <Button size="sm" disabled={!noteDraft.trim() || addNote.isPending} onClick={() => addNote.mutate()}>
+                  {addNote.isPending ? "Saving…" : "Add note"}
+                </Button>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {notes.map((n) => (
+                    <div key={n.id} className="rounded-md border border-border bg-panel/30 p-3 text-sm">
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {staffNameByUserId(profiles, n.author_id)} • {formatDate(n.created_at)}
+                      </div>
+                      <div className="whitespace-pre-wrap">{n.body}</div>
                     </div>
-                    <div className="whitespace-pre-wrap">{n.body}</div>
-                  </div>
-                ))}
-                {notes.length === 0 && <div className="text-xs text-muted-foreground">No notes yet.</div>}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                  {notes.length === 0 && <div className="text-xs text-muted-foreground">No notes yet.</div>}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          <Card>
-            <CardHeader><CardTitle>Stage history</CardTitle></CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                {history.map((h) => (
-                  <li key={h.id} className="border-l-2 border-cyan/40 pl-3">
-                    <div>{h.from_stage ? `${labelFor(LOAN_STAGES, h.from_stage)} → ` : ""}<b>{labelFor(LOAN_STAGES, h.to_stage)}</b></div>
-                    <div className="text-xs text-muted-foreground">{staffNameByUserId(profiles, h.changed_by)} • {formatDate(h.changed_at)}</div>
-                  </li>
-                ))}
-                {history.length === 0 && <div className="text-xs text-muted-foreground">No history.</div>}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="history" className="mt-4">
+            <Card>
+              <CardHeader><CardTitle>Stage history</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm">
+                  {history.map((h) => (
+                    <li key={h.id} className="border-l-2 border-cyan/40 pl-3">
+                      <div>{h.from_stage ? `${labelFor(LOAN_STAGES, h.from_stage)} → ` : ""}<b>{labelFor(LOAN_STAGES, h.to_stage)}</b></div>
+                      <div className="text-xs text-muted-foreground">{staffNameByUserId(profiles, h.changed_by)} • {formatDate(h.changed_at)}</div>
+                    </li>
+                  ))}
+                  {history.length === 0 && <div className="text-xs text-muted-foreground">No history.</div>}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
@@ -314,41 +346,33 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function BorrowerFileCard({ loan, userId, canEdit, onLinked }: {
-  loan: { id: string; borrower_file_id: string | null; borrower_name: string; borrower_email: string | null; borrower_phone: string | null; loan_amount: number | null; purchase_price: number | null; loan_type: string | null; assigned_lo: string | null };
+function BorrowerTab({ loan, userId, canEdit }: {
+  loan: { id: string; borrower_file_id: string | null; borrower_name: string; borrower_email: string | null; borrower_phone: string | null; loan_amount: number | null; purchase_price: number | null; loan_type: string | null };
   userId: string | undefined;
   canEdit: boolean;
-  onLinked: () => void;
 }) {
+  const qc = useQueryClient();
+
   const { data: bf } = useQuery({
     queryKey: ["ops-loan-borrower-file", loan.borrower_file_id],
     queryFn: async () => {
       if (!loan.borrower_file_id) return null;
-      const { data } = await supabase.from("borrower_files").select("id, borrower_name, email, phone, status").eq("id", loan.borrower_file_id).maybeSingle();
+      const { data } = await supabase.from("borrower_files").select("*").eq("id", loan.borrower_file_id).maybeSingle();
       return data;
     },
     enabled: !!loan.borrower_file_id,
   });
 
-  const { data: candidates = [] } = useQuery({
-    queryKey: ["ops-loan-borrower-candidates", loan.id, loan.borrower_email, loan.borrower_phone, loan.borrower_name],
-    queryFn: async () => {
-      if (loan.borrower_file_id) return [];
-      let q = supabase.from("borrower_files").select("id, borrower_name, email, phone").limit(5);
-      if (loan.borrower_email) q = q.eq("email", loan.borrower_email);
-      else if (loan.borrower_phone) q = q.eq("phone", loan.borrower_phone);
-      else q = q.ilike("borrower_name", `%${loan.borrower_name}%`);
-      const { data } = await q;
-      return data ?? [];
-    },
-  });
-
-  const link = useMutation({
-    mutationFn: async (bfId: string) => {
-      const { error } = await supabase.from("loans").update({ borrower_file_id: bfId }).eq("id", loan.id);
+  const updateBf = useMutation({
+    mutationFn: async (patch: Record<string, unknown>) => {
+      if (!loan.borrower_file_id) return;
+      const { error } = await supabase.from("borrower_files").update(patch as never).eq("id", loan.borrower_file_id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Borrower file linked"); onLinked(); },
+    onSuccess: () => {
+      toast.success("Saved");
+      qc.invalidateQueries({ queryKey: ["ops-loan-borrower-file", loan.borrower_file_id] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -370,67 +394,92 @@ function BorrowerFileCard({ loan, userId, canEdit, onLinked }: {
       if (linkErr) throw linkErr;
       return data.id;
     },
-    onSuccess: () => { toast.success("Borrower file created and linked"); onLinked(); },
+    onSuccess: () => {
+      toast.success("Borrower file created");
+      qc.invalidateQueries({ queryKey: ["ops-loan", loan.id] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const unlink = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("loans").update({ borrower_file_id: null }).eq("id", loan.id);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Unlinked"); onLinked(); },
-  });
+  if (!loan.borrower_file_id || !bf) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Borrower file</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground">No borrower file linked to this loan.</div>
+          {canEdit && (
+            <Button size="sm" onClick={() => create.mutate()} disabled={create.isPending}>
+              {create.isPending ? "Creating…" : "Create borrower file"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <CardHeader><CardTitle>Borrower file</CardTitle></CardHeader>
-      <CardContent className="space-y-3">
-        {bf ? (
-          <div className="space-y-2">
-            <div className="rounded-md border border-border bg-panel/30 p-3">
-              <div className="font-medium text-sm">{bf.borrower_name}</div>
-              <div className="text-xs text-muted-foreground">{bf.email ?? "—"} • {bf.phone ?? "—"}</div>
-              <div className="text-xs text-muted-foreground mt-1">Status: {bf.status}</div>
-            </div>
-            <div className="flex gap-2">
-              <Link to={"/borrowers/$id" as never} params={{ id: bf.id } as never}
-                className="text-xs px-3 py-1.5 rounded border border-cyan/40 text-cyan hover:bg-cyan/10">
-                Open file
-              </Link>
-              {canEdit && (
-                <Button variant="outline" size="sm" onClick={() => unlink.mutate()} disabled={unlink.isPending}>
-                  Unlink
-                </Button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="text-xs text-muted-foreground">No borrower file linked.</div>
-            {candidates.length > 0 && (
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Possible matches:</div>
-                {candidates.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between rounded border border-border bg-panel/20 px-2 py-1.5">
-                    <div className="text-xs">
-                      <div className="font-medium">{c.borrower_name}</div>
-                      <div className="text-muted-foreground">{c.email ?? c.phone ?? ""}</div>
-                    </div>
-                    {canEdit && (
-                      <Button size="sm" variant="outline" onClick={() => link.mutate(c.id)} disabled={link.isPending}>Link</Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            {canEdit && (
-              <Button size="sm" onClick={() => create.mutate()} disabled={create.isPending}>
-                {create.isPending ? "Creating…" : "Create new borrower file"}
-              </Button>
-            )}
-          </div>
-        )}
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Borrower file</span>
+          <Link to={"/borrowers/$id" as never} params={{ id: bf.id } as never}
+            className="text-xs px-3 py-1.5 rounded border border-cyan/40 text-cyan hover:bg-cyan/10">
+            Open full file
+          </Link>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Borrower name">
+          <Input disabled={!canEdit} defaultValue={bf.borrower_name ?? ""}
+            onBlur={(e) => e.target.value !== bf.borrower_name && updateBf.mutate({ borrower_name: e.target.value })} />
+        </Field>
+        <Field label="Status">
+          <Select disabled={!canEdit} value={bf.status ?? "active"}
+            onValueChange={(v) => updateBf.mutate({ status: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Email">
+          <Input disabled={!canEdit} defaultValue={bf.email ?? ""}
+            onBlur={(e) => updateBf.mutate({ email: e.target.value || null })} />
+        </Field>
+        <Field label="Phone">
+          <Input disabled={!canEdit} defaultValue={bf.phone ?? ""}
+            onBlur={(e) => updateBf.mutate({ phone: e.target.value || null })} />
+        </Field>
+        <Field label="Loan amount ($)">
+          <Input disabled={!canEdit} type="number" defaultValue={Number(bf.loan_amount ?? 0)}
+            onBlur={(e) => updateBf.mutate({ loan_amount: e.target.value === "" ? null : Number(e.target.value) })} />
+        </Field>
+        <Field label="Purchase price ($)">
+          <Input disabled={!canEdit} type="number" defaultValue={Number(bf.purchase_price ?? 0)}
+            onBlur={(e) => updateBf.mutate({ purchase_price: e.target.value === "" ? null : Number(e.target.value) })} />
+        </Field>
+        <Field label="Loan purpose">
+          <Input disabled={!canEdit} defaultValue={bf.loan_purpose ?? ""}
+            onBlur={(e) => updateBf.mutate({ loan_purpose: e.target.value || null })} />
+        </Field>
+        <Field label="Target program">
+          <Input disabled={!canEdit} defaultValue={bf.target_program ?? ""}
+            onBlur={(e) => updateBf.mutate({ target_program: e.target.value || null })} />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Property address">
+            <Input disabled={!canEdit} defaultValue={bf.property_address ?? ""}
+              onBlur={(e) => updateBf.mutate({ property_address: e.target.value || null })} />
+          </Field>
+        </div>
+        <div className="sm:col-span-2">
+          <Field label="Notes">
+            <Textarea rows={3} disabled={!canEdit} defaultValue={bf.notes ?? ""}
+              onBlur={(e) => updateBf.mutate({ notes: e.target.value || null })} />
+          </Field>
+        </div>
       </CardContent>
     </Card>
   );
