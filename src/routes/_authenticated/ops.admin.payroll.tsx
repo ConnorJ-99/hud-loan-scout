@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchStaffProfiles, staffName, staffNameByUserId } from "@/lib/ops/profiles";
 import { COMP_PLANS, formatCurrency, formatDate, labelFor, type CompPlan } from "@/lib/ops/loan-helpers";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
+import { downloadCsv, toCsv } from "@/lib/ops/csv";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/ops/admin/payroll")({
@@ -78,7 +79,24 @@ function PayrollPage() {
       <OpsPageHeader
         title="Payroll"
         subtitle="Manage staff comp plans and record salary/draw payouts"
-        actions={<Button size="sm" onClick={() => setOpen(true)}><Plus className="size-4 mr-1" /> Record payout</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => {
+              const csv = toCsv(payouts.map((p) => ({
+                staff: staffNameByUserId(profiles, p.user_id),
+                pay_period: p.pay_period,
+                salary: Number(p.salary_amount ?? 0).toFixed(2),
+                draw: Number(p.draw_amount ?? 0).toFixed(2),
+                paid_on: p.paid_on ?? "",
+                notes: p.notes ?? "",
+              })));
+              downloadCsv(`payouts-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+            }}>
+              <Download className="h-4 w-4 mr-1" /> Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)}><Plus className="size-4 mr-1" /> Record payout</Button>
+          </div>
+        }
       />
       <div className="p-6 space-y-6">
         <Card>
