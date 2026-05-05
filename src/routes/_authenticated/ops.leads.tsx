@@ -73,6 +73,19 @@ function LeadsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteLeads = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("leads").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lead deleted");
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["ops-leads"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const allChecked = filtered.length > 0 && filtered.every((l) => selected.has(l.id));
 
   return (
