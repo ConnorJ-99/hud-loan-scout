@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { EXPENSE_CATEGORIES, formatCurrency, formatDate, labelFor, type ExpenseCategory } from "@/lib/ops/loan-helpers";
+import { EXPENSE_CATEGORIES, formatCurrency, type ExpenseCategory } from "@/lib/ops/loan-helpers";
 import { Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
