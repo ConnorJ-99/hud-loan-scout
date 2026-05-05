@@ -202,6 +202,57 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          created_by: string | null
+          date_due: string | null
+          date_paid: string | null
+          department: string | null
+          id: string
+          is_recurring: boolean
+          name: string
+          notes: string | null
+          recurrence: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          date_due?: string | null
+          date_paid?: string | null
+          department?: string | null
+          id?: string
+          is_recurring?: boolean
+          name: string
+          notes?: string | null
+          recurrence?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          date_due?: string | null
+          date_paid?: string | null
+          department?: string | null
+          id?: string
+          is_recurring?: boolean
+          name?: string
+          notes?: string | null
+          recurrence?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       income_analyses: {
         Row: {
           ai_notes: string | null
@@ -279,6 +330,59 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          assigned_lo: string | null
+          converted_loan_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          raw_payload: Json | null
+          source: Database["public"]["Enums"]["lead_source"]
+          status: Database["public"]["Enums"]["lead_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_lo?: string | null
+          converted_loan_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          raw_payload?: Json | null
+          source?: Database["public"]["Enums"]["lead_source"]
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_lo?: string | null
+          converted_loan_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          raw_payload?: Json | null
+          source?: Database["public"]["Enums"]["lead_source"]
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_converted_loan_fk"
+            columns: ["converted_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lenders: {
         Row: {
           ae_email: string | null
@@ -329,6 +433,91 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      loan_fees: {
+        Row: {
+          amount_mode: Database["public"]["Enums"]["comp_mode"]
+          created_at: string
+          deduct_from: Database["public"]["Enums"]["fee_deduct_from"]
+          flat_amount: number
+          id: string
+          label: string | null
+          loan_id: string
+          notes: string | null
+          pct_of_gross: number
+          recipient_role: Database["public"]["Enums"]["fee_recipient_role"]
+          recipient_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_mode?: Database["public"]["Enums"]["comp_mode"]
+          created_at?: string
+          deduct_from?: Database["public"]["Enums"]["fee_deduct_from"]
+          flat_amount?: number
+          id?: string
+          label?: string | null
+          loan_id: string
+          notes?: string | null
+          pct_of_gross?: number
+          recipient_role?: Database["public"]["Enums"]["fee_recipient_role"]
+          recipient_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_mode?: Database["public"]["Enums"]["comp_mode"]
+          created_at?: string
+          deduct_from?: Database["public"]["Enums"]["fee_deduct_from"]
+          flat_amount?: number
+          id?: string
+          label?: string | null
+          loan_id?: string
+          notes?: string | null
+          pct_of_gross?: number
+          recipient_role?: Database["public"]["Enums"]["fee_recipient_role"]
+          recipient_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_fees_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          loan_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          loan_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          loan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_notes_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loan_programs: {
         Row: {
@@ -509,6 +698,130 @@ export type Database = {
           },
         ]
       }
+      loan_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          from_stage: Database["public"]["Enums"]["loan_stage"] | null
+          id: string
+          loan_id: string
+          note: string | null
+          to_stage: Database["public"]["Enums"]["loan_stage"]
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          from_stage?: Database["public"]["Enums"]["loan_stage"] | null
+          id?: string
+          loan_id: string
+          note?: string | null
+          to_stage: Database["public"]["Enums"]["loan_stage"]
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          from_stage?: Database["public"]["Enums"]["loan_stage"] | null
+          id?: string
+          loan_id?: string
+          note?: string | null
+          to_stage?: Database["public"]["Enums"]["loan_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_stage_history_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          actual_close_date: string | null
+          assigned_lo: string | null
+          borrower_email: string | null
+          borrower_name: string
+          borrower_phone: string | null
+          comp_flat_amount: number
+          comp_mode: Database["public"]["Enums"]["comp_mode"]
+          comp_points: number
+          company_revenue: number | null
+          created_at: string
+          expected_close_date: string | null
+          gross_commission: number
+          house_split_pct: number
+          id: string
+          lo_comp_amount: number | null
+          lo_comp_pct: number | null
+          lo_split_pct: number
+          loan_amount: number | null
+          loan_type: string | null
+          notes: string | null
+          source_lead_id: string | null
+          stage: Database["public"]["Enums"]["loan_stage"]
+          updated_at: string
+        }
+        Insert: {
+          actual_close_date?: string | null
+          assigned_lo?: string | null
+          borrower_email?: string | null
+          borrower_name: string
+          borrower_phone?: string | null
+          comp_flat_amount?: number
+          comp_mode?: Database["public"]["Enums"]["comp_mode"]
+          comp_points?: number
+          company_revenue?: number | null
+          created_at?: string
+          expected_close_date?: string | null
+          gross_commission?: number
+          house_split_pct?: number
+          id?: string
+          lo_comp_amount?: number | null
+          lo_comp_pct?: number | null
+          lo_split_pct?: number
+          loan_amount?: number | null
+          loan_type?: string | null
+          notes?: string | null
+          source_lead_id?: string | null
+          stage?: Database["public"]["Enums"]["loan_stage"]
+          updated_at?: string
+        }
+        Update: {
+          actual_close_date?: string | null
+          assigned_lo?: string | null
+          borrower_email?: string | null
+          borrower_name?: string
+          borrower_phone?: string | null
+          comp_flat_amount?: number
+          comp_mode?: Database["public"]["Enums"]["comp_mode"]
+          comp_points?: number
+          company_revenue?: number | null
+          created_at?: string
+          expected_close_date?: string | null
+          gross_commission?: number
+          house_split_pct?: number
+          id?: string
+          lo_comp_amount?: number | null
+          lo_comp_pct?: number | null
+          lo_split_pct?: number
+          loan_amount?: number | null
+          loan_type?: string | null
+          notes?: string | null
+          source_lead_id?: string | null
+          stage?: Database["public"]["Enums"]["loan_stage"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_source_lead_id_fkey"
+            columns: ["source_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       overlays: {
         Row: {
           created_at: string
@@ -563,23 +876,47 @@ export type Database = {
       }
       profiles: {
         Row: {
+          comp_plan: Database["public"]["Enums"]["comp_plan"]
           created_at: string
+          default_comp_pct: number
+          default_house_split_pct: number
+          default_lo_split_pct: number
           display_name: string | null
+          email: string | null
+          full_name: string | null
           id: string
+          monthly_draw: number
+          monthly_salary: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          comp_plan?: Database["public"]["Enums"]["comp_plan"]
           created_at?: string
+          default_comp_pct?: number
+          default_house_split_pct?: number
+          default_lo_split_pct?: number
           display_name?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: string
+          monthly_draw?: number
+          monthly_salary?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          comp_plan?: Database["public"]["Enums"]["comp_plan"]
           created_at?: string
+          default_comp_pct?: number
+          default_house_split_pct?: number
+          default_lo_split_pct?: number
           display_name?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: string
+          monthly_draw?: number
+          monthly_salary?: number
           updated_at?: string
           user_id?: string
         }
@@ -632,6 +969,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      salary_payouts: {
+        Row: {
+          created_at: string
+          draw_amount: number
+          id: string
+          notes: string | null
+          paid_on: string | null
+          pay_period: string
+          salary_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draw_amount?: number
+          id?: string
+          notes?: string | null
+          paid_on?: string | null
+          pay_period: string
+          salary_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draw_amount?: number
+          id?: string
+          notes?: string | null
+          paid_on?: string | null
+          pay_period?: string
+          salary_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       statement_transactions: {
         Row: {
@@ -726,6 +1099,27 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_config: {
+        Row: {
+          id: string
+          shared_secret: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          shared_secret: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          shared_secret?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       lenders_public: {
@@ -778,7 +1172,45 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "loan_officer" | "processor" | "assistant"
+      comp_mode: "percentage" | "flat"
+      comp_plan:
+        | "commission_only"
+        | "salary"
+        | "salary_plus_commission"
+        | "draw_against_commission"
+      expense_category:
+        | "payroll"
+        | "rent"
+        | "marketing"
+        | "zillow_leads"
+        | "office"
+        | "processing"
+        | "licensing"
+        | "software"
+        | "compliance"
+        | "advertising"
+        | "team"
+        | "misc"
+      fee_deduct_from: "lo_split" | "house_split"
+      fee_recipient_role: "loan_officer" | "processor" | "assistant" | "admin"
+      lead_source: "ghl" | "zapier" | "website" | "zillow" | "other"
+      lead_status:
+        | "new"
+        | "contacted"
+        | "not_ready"
+        | "bad_lead"
+        | "duplicate"
+        | "moved_to_tracking"
+      loan_stage:
+        | "new"
+        | "application"
+        | "processing"
+        | "underwriting"
+        | "conditional_approval"
+        | "clear_to_close"
+        | "funded"
+        | "lost"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -906,7 +1338,49 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "loan_officer", "processor", "assistant"],
+      comp_mode: ["percentage", "flat"],
+      comp_plan: [
+        "commission_only",
+        "salary",
+        "salary_plus_commission",
+        "draw_against_commission",
+      ],
+      expense_category: [
+        "payroll",
+        "rent",
+        "marketing",
+        "zillow_leads",
+        "office",
+        "processing",
+        "licensing",
+        "software",
+        "compliance",
+        "advertising",
+        "team",
+        "misc",
+      ],
+      fee_deduct_from: ["lo_split", "house_split"],
+      fee_recipient_role: ["loan_officer", "processor", "assistant", "admin"],
+      lead_source: ["ghl", "zapier", "website", "zillow", "other"],
+      lead_status: [
+        "new",
+        "contacted",
+        "not_ready",
+        "bad_lead",
+        "duplicate",
+        "moved_to_tracking",
+      ],
+      loan_stage: [
+        "new",
+        "application",
+        "processing",
+        "underwriting",
+        "conditional_approval",
+        "clear_to_close",
+        "funded",
+        "lost",
+      ],
     },
   },
 } as const
