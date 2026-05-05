@@ -258,6 +258,8 @@ function LoanDetail() {
         </div>
 
         <div className="space-y-6">
+          <BorrowerFileCard loan={loan} userId={user?.id} canEdit={!!canEdit} onLinked={() => qc.invalidateQueries({ queryKey: ["ops-loan", id] })} />
+
           <Card>
             <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
             <CardContent className="space-y-3">
