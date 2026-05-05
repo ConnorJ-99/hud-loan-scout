@@ -123,8 +123,14 @@ function LoanDetail() {
                   onBlur={(e) => e.target.value !== loan.borrower_name && update.mutate({ borrower_name: e.target.value })} />
               </Field>
               <Field label="Loan type">
-                <Input disabled={!canEdit} defaultValue={loan.loan_type ?? ""}
-                  onBlur={(e) => update.mutate({ loan_type: e.target.value || null })} />
+                <Select disabled={!canEdit} value={loan.loan_type ?? "__none"}
+                  onValueChange={(v) => update.mutate({ loan_type: v === "__none" ? null : v })}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">—</SelectItem>
+                    {LOAN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Loan amount ($)">
                 <Input disabled={!canEdit} type="number" defaultValue={Number(loan.loan_amount ?? 0)}
