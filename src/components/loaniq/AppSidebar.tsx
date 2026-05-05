@@ -10,6 +10,12 @@ import {
   Brain,
   LogOut,
   Activity,
+  Briefcase,
+  Inbox,
+  Webhook,
+  Receipt,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +30,19 @@ const NAV: NavItem[] = [
   { to: "/borrowers", label: "Borrower Files", icon: Users },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
+];
+
+const OPS_NAV: NavItem[] = [
+  { to: "/ops", label: "Pipeline", icon: Briefcase, exact: true },
+  { to: "/ops/leads", label: "Lead Intake", icon: Inbox },
+  { to: "/ops/loans", label: "Tracked Loans", icon: Briefcase },
+];
+
+const OPS_ADMIN_NAV: NavItem[] = [
+  { to: "/ops/admin/production", label: "Production", icon: TrendingUp },
+  { to: "/ops/admin/expenses", label: "Expenses", icon: Receipt },
+  { to: "/ops/admin/payroll", label: "Payroll", icon: Wallet },
+  { to: "/ops/admin/webhooks", label: "Webhooks", icon: Webhook },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -94,6 +113,54 @@ export function AppSidebar() {
             );
           })}
         </div>
+
+        <div className="px-3 mt-5 mb-1 text-hud text-[10px] text-muted-foreground">OPERATIONS</div>
+        <div className="space-y-0.5 px-2">
+          {OPS_NAV.map((item) => {
+            const active = isActive(item.to, item.exact);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to as never}
+                className={`flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-all ${
+                  active
+                    ? "bg-cyan/10 text-cyan border-l-2 border-cyan"
+                    : "text-muted-foreground hover:bg-panel hover:text-foreground border-l-2 border-transparent"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-hud text-xs">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {isAdmin && (
+          <>
+            <div className="px-3 mt-5 mb-1 text-hud text-[10px] text-muted-foreground">OPS ADMIN</div>
+            <div className="space-y-0.5 px-2">
+              {OPS_ADMIN_NAV.map((item) => {
+                const active = isActive(item.to);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to as never}
+                    className={`flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-all ${
+                      active
+                        ? "bg-cyan/10 text-cyan border-l-2 border-cyan"
+                        : "text-muted-foreground hover:bg-panel hover:text-foreground border-l-2 border-transparent"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-hud text-xs">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {isAdmin && (
           <>
