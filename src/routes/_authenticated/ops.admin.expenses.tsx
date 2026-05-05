@@ -96,7 +96,7 @@ function ExpensesPage() {
                     <td className="px-4 py-2 font-mono">{formatCurrency(Number(e.amount ?? 0))}</td>
                     <td className="px-4 py-2 text-muted-foreground">{formatDate(e.date_due)}</td>
                     <td className="px-4 py-2 text-muted-foreground">{formatDate(e.date_paid)}</td>
-                    <td className="px-4 py-2 text-xs">{e.is_recurring ? (e.recurrence || "Yes") : "—"}</td>
+                    <td className="px-4 py-2 text-xs capitalize">{e.is_recurring ? (e.recurrence || "Yes") : "—"}</td>
                     <td className="px-4 py-2 text-right">
                       <Button size="icon" variant="ghost" onClick={() => remove.mutate(e.id)}>
                         <Trash2 className="size-4 text-red-500" />
