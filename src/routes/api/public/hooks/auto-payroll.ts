@@ -78,7 +78,8 @@ export const Route = createFileRoute("/api/public/hooks/auto-payroll")({
         let created = 0;
         const skipped: { user_id: string; reason: string }[] = [];
 
-        for (const p of profiles ?? []) {
+        for (const raw of profiles ?? []) {
+          const p = raw as Record<string, unknown> & { user_id: string };
           const freq = (p.pay_frequency as string) || "monthly";
           const annualSalary = Number(p.annual_salary ?? 0) || Number(p.monthly_salary ?? 0) * 12;
           const annualDraw = Number(p.annual_draw ?? 0) || Number(p.monthly_draw ?? 0) * 12;
