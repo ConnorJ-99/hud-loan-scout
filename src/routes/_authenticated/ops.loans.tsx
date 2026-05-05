@@ -103,7 +103,11 @@ function LoansPage() {
                   <tbody>
                     {loans.map((l) => (
                       <tr key={l.id} className="border-b border-border last:border-b-0 hover:bg-panel/30">
-                        <td className="px-4 py-3 font-medium">{l.borrower_name}</td>
+                        <td className="px-4 py-3 font-medium">
+                          <Link to="/ops/loans/$id" params={{ id: l.id }} className="hover:text-cyan underline-offset-2 hover:underline">
+                            {l.borrower_name}
+                          </Link>
+                        </td>
                         <td className="px-4 py-3">{l.loan_type || "—"}</td>
                         <td className="px-4 py-3">{formatCurrency(Number(l.loan_amount ?? 0))}</td>
                         <td className="px-4 py-3">
