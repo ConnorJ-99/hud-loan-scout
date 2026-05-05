@@ -234,16 +234,29 @@ function PayrollPage() {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Pay period (1st of month)</Label>
+              <div className="space-y-1"><Label>Pay period (period covered)</Label>
                 <Input type="date" value={form.pay_period} onChange={(e) => setForm({ ...form, pay_period: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Paid on</Label>
-                <Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Frequency</Label>
+                <Select value={form.frequency} onValueChange={(v) => setForm({ ...form, frequency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="semimonthly">Semi-Monthly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label>Salary ($)</Label>
                 <Input type="number" value={form.salary_amount} onChange={(e) => setForm({ ...form, salary_amount: e.target.value })} /></div>
               <div className="space-y-1"><Label>Draw ($)</Label>
                 <Input type="number" value={form.draw_amount} onChange={(e) => setForm({ ...form, draw_amount: e.target.value })} /></div>
+            </div>
+            <div className="space-y-1"><Label>Paid on</Label>
+              <Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} />
+              <p className="text-xs text-muted-foreground">Leave blank to record as Pending; mark paid later.</p>
             </div>
             <div className="space-y-1"><Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
