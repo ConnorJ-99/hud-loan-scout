@@ -16,6 +16,8 @@ import {
   Receipt,
   Wallet,
   TrendingUp,
+  UserCog,
+  Target,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { supabase } from "@/integrations/supabase/client";
