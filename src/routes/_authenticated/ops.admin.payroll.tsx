@@ -37,7 +37,7 @@ function PayrollPage() {
 
   const updateProfile = useMutation({
     mutationFn: async ({ user_id, patch }: { user_id: string; patch: Record<string, unknown> }) => {
-      const { error } = await supabase.from("profiles").update(patch).eq("user_id", user_id);
+      const { error } = await supabase.from("profiles").update(patch as never).eq("user_id", user_id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops-staff"] }),
