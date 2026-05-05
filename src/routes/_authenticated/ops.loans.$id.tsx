@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LoanFeesEditor } from "@/components/ops/LoanFeesEditor";
 import { fetchStaffProfiles, staffName, staffNameByUserId } from "@/lib/ops/profiles";
 import {
-  COMP_MODES, LOAN_STAGES, computeBreakdown, formatCurrency, formatDate,
+  COMP_MODES, LOAN_STAGES, LOAN_TYPES, computeBreakdown, formatCurrency, formatDate,
   labelFor, loanStageBadgeClass, type CompMode, type LoanStage,
 } from "@/lib/ops/loan-helpers";
 import { ArrowLeft } from "lucide-react";
