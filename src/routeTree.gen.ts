@@ -27,6 +27,7 @@ import { Route as AuthenticatedBorrowersIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedOpsLoansIdRouteImport } from './routes/_authenticated/ops.loans.$id'
 import { Route as AuthenticatedOpsLeadsIdRouteImport } from './routes/_authenticated/ops.leads.$id'
 import { Route as AuthenticatedOpsAdminWebhooksRouteImport } from './routes/_authenticated/ops.admin.webhooks'
+import { Route as AuthenticatedOpsAdminUsersRouteImport } from './routes/_authenticated/ops.admin.users'
 import { Route as AuthenticatedOpsAdminProductionRouteImport } from './routes/_authenticated/ops.admin.production'
 import { Route as AuthenticatedOpsAdminPayrollRouteImport } from './routes/_authenticated/ops.admin.payroll'
 import { Route as AuthenticatedOpsAdminExpensesRouteImport } from './routes/_authenticated/ops.admin.expenses'
@@ -126,6 +127,12 @@ const AuthenticatedOpsAdminWebhooksRoute =
     path: '/ops/admin/webhooks',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOpsAdminUsersRoute =
+  AuthenticatedOpsAdminUsersRouteImport.update({
+    id: '/ops/admin/users',
+    path: '/ops/admin/users',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedOpsAdminProductionRoute =
   AuthenticatedOpsAdminProductionRouteImport.update({
     id: '/ops/admin/production',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
   '/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
   '/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
+  '/ops/admin/users': typeof AuthenticatedOpsAdminUsersRoute
   '/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
   '/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
   '/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
   '/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
   '/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
+  '/ops/admin/users': typeof AuthenticatedOpsAdminUsersRoute
   '/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
   '/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
   '/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
@@ -217,6 +226,7 @@ export interface FileRoutesById {
   '/_authenticated/ops/admin/expenses': typeof AuthenticatedOpsAdminExpensesRoute
   '/_authenticated/ops/admin/payroll': typeof AuthenticatedOpsAdminPayrollRoute
   '/_authenticated/ops/admin/production': typeof AuthenticatedOpsAdminProductionRoute
+  '/_authenticated/ops/admin/users': typeof AuthenticatedOpsAdminUsersRoute
   '/_authenticated/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
   '/_authenticated/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
   '/_authenticated/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/ops/admin/expenses'
     | '/ops/admin/payroll'
     | '/ops/admin/production'
+    | '/ops/admin/users'
     | '/ops/admin/webhooks'
     | '/ops/leads/$id'
     | '/ops/loans/$id'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/ops/admin/expenses'
     | '/ops/admin/payroll'
     | '/ops/admin/production'
+    | '/ops/admin/users'
     | '/ops/admin/webhooks'
     | '/ops/leads/$id'
     | '/ops/loans/$id'
@@ -289,6 +301,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ops/admin/expenses'
     | '/_authenticated/ops/admin/payroll'
     | '/_authenticated/ops/admin/production'
+    | '/_authenticated/ops/admin/users'
     | '/_authenticated/ops/admin/webhooks'
     | '/_authenticated/ops/leads/$id'
     | '/_authenticated/ops/loans/$id'
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOpsAdminWebhooksRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/ops/admin/users': {
+      id: '/_authenticated/ops/admin/users'
+      path: '/ops/admin/users'
+      fullPath: '/ops/admin/users'
+      preLoaderRoute: typeof AuthenticatedOpsAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/ops/admin/production': {
       id: '/_authenticated/ops/admin/production'
       path: '/ops/admin/production'
@@ -503,6 +523,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedOpsAdminExpensesRoute: typeof AuthenticatedOpsAdminExpensesRoute
   AuthenticatedOpsAdminPayrollRoute: typeof AuthenticatedOpsAdminPayrollRoute
   AuthenticatedOpsAdminProductionRoute: typeof AuthenticatedOpsAdminProductionRoute
+  AuthenticatedOpsAdminUsersRoute: typeof AuthenticatedOpsAdminUsersRoute
   AuthenticatedOpsAdminWebhooksRoute: typeof AuthenticatedOpsAdminWebhooksRoute
 }
 
@@ -523,6 +544,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedOpsAdminExpensesRoute: AuthenticatedOpsAdminExpensesRoute,
   AuthenticatedOpsAdminPayrollRoute: AuthenticatedOpsAdminPayrollRoute,
   AuthenticatedOpsAdminProductionRoute: AuthenticatedOpsAdminProductionRoute,
+  AuthenticatedOpsAdminUsersRoute: AuthenticatedOpsAdminUsersRoute,
   AuthenticatedOpsAdminWebhooksRoute: AuthenticatedOpsAdminWebhooksRoute,
 }
 
