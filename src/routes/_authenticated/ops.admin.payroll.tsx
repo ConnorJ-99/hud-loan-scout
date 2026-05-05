@@ -110,8 +110,7 @@ function PayrollPage() {
                     <th className="px-4 py-2">Plan</th>
                     <th className="px-4 py-2">Monthly salary</th>
                     <th className="px-4 py-2">Monthly draw</th>
-                    <th className="px-4 py-2">Default LO split (%)</th>
-                    <th className="px-4 py-2">Default house split (%)</th>
+                    <th className="px-4 py-2">Pay frequency</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -133,13 +132,8 @@ function PayrollPage() {
                         <Input type="number" className="h-8 w-32" defaultValue={Number(p.monthly_draw ?? 0)}
                           onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { monthly_draw: Number(e.target.value) || 0 } })} />
                       </td>
-                      <td className="px-4 py-2">
-                        <Input type="number" step="0.01" className="h-8 w-24" defaultValue={(Number(p.default_lo_split_pct ?? 0) * 100).toFixed(2)}
-                          onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { default_lo_split_pct: (Number(e.target.value) || 0) / 100 } })} />
-                      </td>
-                      <td className="px-4 py-2">
-                        <Input type="number" step="0.01" className="h-8 w-24" defaultValue={(Number(p.default_house_split_pct ?? 0) * 100).toFixed(2)}
-                          onBlur={(e) => updateProfile.mutate({ user_id: p.user_id, patch: { default_house_split_pct: (Number(e.target.value) || 0) / 100 } })} />
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        Set per payout below
                       </td>
                     </tr>
                   ))}
