@@ -138,6 +138,16 @@ function LeadsPage() {
                 {profiles.map((p) => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email || "Staff"}</SelectItem>)}
               </SelectContent>
             </Select>
+            {isAdmin && (
+              <Button variant="outline" size="sm" className="text-red-400 hover:text-red-300"
+                onClick={() => {
+                  if (confirm(`Delete ${selected.size} lead${selected.size === 1 ? "" : "s"}? This cannot be undone.`)) {
+                    deleteLeads.mutate([...selected]);
+                  }
+                }}>
+                <Trash2 className="size-4 mr-1" /> Delete
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
           </CardContent></Card>
         )}
