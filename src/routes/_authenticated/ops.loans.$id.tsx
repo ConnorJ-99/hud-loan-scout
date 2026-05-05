@@ -174,11 +174,33 @@ function LoanDetail() {
                 <Input disabled={!canEdit} defaultValue={loan.borrower_email ?? ""}
                   onBlur={(e) => update.mutate({ borrower_email: e.target.value || null })} />
               </Field>
+              <Field label="Purchase price ($)">
+                <Input disabled={!canEdit} type="number" defaultValue={Number(loan.purchase_price ?? 0)}
+                  onBlur={(e) => update.mutate({ purchase_price: e.target.value === "" ? null : Number(e.target.value) })} />
+              </Field>
+              <Field label="Interest rate (%)">
+                <Input disabled={!canEdit} type="number" step="0.001" defaultValue={Number(loan.interest_rate ?? 0)}
+                  onBlur={(e) => update.mutate({ interest_rate: e.target.value === "" ? null : Number(e.target.value) })} />
+              </Field>
+              <Field label="Realtor name">
+                <Input disabled={!canEdit} defaultValue={loan.realtor_name ?? ""}
+                  onBlur={(e) => update.mutate({ realtor_name: e.target.value || null })} />
+              </Field>
+              <Field label="Realtor phone">
+                <Input disabled={!canEdit} defaultValue={loan.realtor_phone ?? ""}
+                  onBlur={(e) => update.mutate({ realtor_phone: e.target.value || null })} />
+              </Field>
+              <Field label="Realtor email">
+                <Input disabled={!canEdit} defaultValue={loan.realtor_email ?? ""}
+                  onBlur={(e) => update.mutate({ realtor_email: e.target.value || null })} />
+              </Field>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Compensation</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Compensation {!isAdmin && <span className="text-xs text-muted-foreground font-normal">(admin-only)</span>}</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Field label="Comp mode">
