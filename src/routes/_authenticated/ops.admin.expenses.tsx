@@ -100,12 +100,50 @@ function ExpensesPage() {
               <tbody>
                 {expenses.map((e) => (
                   <tr key={e.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2 font-medium">{e.name}</td>
-                    <td className="px-4 py-2">{labelFor(EXPENSE_CATEGORIES, e.category)}</td>
-                    <td className="px-4 py-2 font-mono">{formatCurrency(Number(e.amount ?? 0))}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{formatDate(e.date_due)}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{formatDate(e.date_paid)}</td>
-                    <td className="px-4 py-2 text-xs capitalize">{e.is_recurring ? (e.recurrence || "Yes") : "—"}</td>
+                    <td className="px-4 py-2">
+                      <Input className="h-8 min-w-[160px]" defaultValue={e.name}
+                        onBlur={(ev) => ev.target.value !== e.name && updateExpense.mutate({ id: e.id, patch: { name: ev.target.value } })} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <Select value={e.category}
+                        onValueChange={(v) => updateExpense.mutate({ id: e.id, patch: { category: v } })}>
+                        <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-2">
+                      <Input type="number" className="h-8 w-28 font-mono" defaultValue={Number(e.amount ?? 0)}
+                        onBlur={(ev) => updateExpense.mutate({ id: e.id, patch: { amount: Number(ev.target.value) || 0 } })} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <Input type="date" className="h-8 w-36" defaultValue={e.date_due ?? ""}
+                        onBlur={(ev) => updateExpense.mutate({ id: e.id, patch: { date_due: ev.target.value || null } })} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <Input type="date" className="h-8 w-36" defaultValue={e.date_paid ?? ""}
+                        onBlur={(ev) => updateExpense.mutate({ id: e.id, patch: { date_paid: ev.target.value || null } })} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={!!e.is_recurring}
+                          onChange={(ev) => updateExpense.mutate({ id: e.id, patch: { is_recurring: ev.target.checked, recurrence: ev.target.checked && !e.recurrence ? "monthly" : e.recurrence } })} />
+                        {e.is_recurring && (
+                          <Select value={e.recurrence || "monthly"}
+                            onValueChange={(v) => updateExpense.mutate({ id: e.id, patch: { recurrence: v } })}>
+                            <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="quarterly">Quarterly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-2 text-right">
                       <Button size="icon" variant="ghost" onClick={() => remove.mutate(e.id)}>
                         <Trash2 className="size-4 text-red-500" />
