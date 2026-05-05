@@ -20,7 +20,7 @@ const SOURCES = [
   { key: "zapier", label: "Zapier" },
   { key: "website", label: "Website Form" },
   { key: "zillow", label: "Zillow" },
-  { key: "generic", label: "Generic" },
+  { key: "other", label: "Generic / Other" },
 ];
 
 function genSecret() {
