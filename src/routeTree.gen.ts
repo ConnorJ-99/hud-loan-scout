@@ -24,6 +24,7 @@ import { Route as AuthenticatedOpsLoansRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedOpsLeadsRouteImport } from './routes/_authenticated/ops.leads'
 import { Route as AuthenticatedIncomeAnalyzerIdRouteImport } from './routes/_authenticated/income-analyzer.$id'
 import { Route as AuthenticatedBorrowersIdRouteImport } from './routes/_authenticated/borrowers.$id'
+import { Route as ApiPublicHooksAutoPayrollRouteImport } from './routes/api/public/hooks/auto-payroll'
 import { Route as AuthenticatedOpsLoansIdRouteImport } from './routes/_authenticated/ops.loans.$id'
 import { Route as AuthenticatedOpsLeadsIdRouteImport } from './routes/_authenticated/ops.leads.$id'
 import { Route as AuthenticatedOpsAdminWebhooksRouteImport } from './routes/_authenticated/ops.admin.webhooks'
@@ -112,6 +113,12 @@ const AuthenticatedBorrowersIdRoute =
     path: '/borrowers/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicHooksAutoPayrollRoute =
+  ApiPublicHooksAutoPayrollRouteImport.update({
+    id: '/api/public/hooks/auto-payroll',
+    path: '/api/public/hooks/auto-payroll',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedOpsLoansIdRoute = AuthenticatedOpsLoansIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -188,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
   '/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
   '/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
+  '/api/public/hooks/auto-payroll': typeof ApiPublicHooksAutoPayrollRoute
   '/api/public/webhooks/leads/$source': typeof ApiPublicWebhooksLeadsSourceRoute
 }
 export interface FileRoutesByTo {
@@ -213,6 +221,7 @@ export interface FileRoutesByTo {
   '/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
   '/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
   '/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
+  '/api/public/hooks/auto-payroll': typeof ApiPublicHooksAutoPayrollRoute
   '/api/public/webhooks/leads/$source': typeof ApiPublicWebhooksLeadsSourceRoute
 }
 export interface FileRoutesById {
@@ -240,6 +249,7 @@ export interface FileRoutesById {
   '/_authenticated/ops/admin/webhooks': typeof AuthenticatedOpsAdminWebhooksRoute
   '/_authenticated/ops/leads/$id': typeof AuthenticatedOpsLeadsIdRoute
   '/_authenticated/ops/loans/$id': typeof AuthenticatedOpsLoansIdRoute
+  '/api/public/hooks/auto-payroll': typeof ApiPublicHooksAutoPayrollRoute
   '/api/public/webhooks/leads/$source': typeof ApiPublicWebhooksLeadsSourceRoute
 }
 export interface FileRouteTypes {
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/ops/admin/webhooks'
     | '/ops/leads/$id'
     | '/ops/loans/$id'
+    | '/api/public/hooks/auto-payroll'
     | '/api/public/webhooks/leads/$source'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/ops/admin/webhooks'
     | '/ops/leads/$id'
     | '/ops/loans/$id'
+    | '/api/public/hooks/auto-payroll'
     | '/api/public/webhooks/leads/$source'
   id:
     | '__root__'
@@ -318,12 +330,14 @@ export interface FileRouteTypes {
     | '/_authenticated/ops/admin/webhooks'
     | '/_authenticated/ops/leads/$id'
     | '/_authenticated/ops/loans/$id'
+    | '/api/public/hooks/auto-payroll'
     | '/api/public/webhooks/leads/$source'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksAutoPayrollRoute: typeof ApiPublicHooksAutoPayrollRoute
   ApiPublicWebhooksLeadsSourceRoute: typeof ApiPublicWebhooksLeadsSourceRoute
 }
 
@@ -433,6 +447,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/borrowers/$id'
       preLoaderRoute: typeof AuthenticatedBorrowersIdRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/hooks/auto-payroll': {
+      id: '/api/public/hooks/auto-payroll'
+      path: '/api/public/hooks/auto-payroll'
+      fullPath: '/api/public/hooks/auto-payroll'
+      preLoaderRoute: typeof ApiPublicHooksAutoPayrollRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/ops/loans/$id': {
       id: '/_authenticated/ops/loans/$id'
@@ -577,6 +598,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksAutoPayrollRoute: ApiPublicHooksAutoPayrollRoute,
   ApiPublicWebhooksLeadsSourceRoute: ApiPublicWebhooksLeadsSourceRoute,
 }
 export const routeTree = rootRouteImport
