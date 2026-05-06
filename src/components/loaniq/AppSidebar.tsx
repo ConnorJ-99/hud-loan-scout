@@ -122,6 +122,28 @@ export function AppSidebar() {
           })}
         </div>
 
+        <div className="px-3 mt-5 mb-1 text-hud text-[10px] text-muted-foreground">CALCULATORS</div>
+        <div className="space-y-0.5 px-2">
+          {CALC_NAV.map((item) => {
+            const active = isActive(item.to, item.exact);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to as never}
+                className={`flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-all ${
+                  active
+                    ? "bg-cyan/10 text-cyan border-l-2 border-cyan"
+                    : "text-muted-foreground hover:bg-panel hover:text-foreground border-l-2 border-transparent"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-hud text-xs">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
         <div className="px-3 mt-5 mb-1 text-hud text-[10px] text-muted-foreground">OPERATIONS</div>
         <div className="space-y-0.5 px-2">
           {OPS_NAV.map((item) => {
