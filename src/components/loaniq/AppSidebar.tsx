@@ -18,6 +18,7 @@ import {
   TrendingUp,
   UserCog,
   Target,
+  Percent,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,10 @@ const NAV: NavItem[] = [
   { to: "/income-analyzer", label: "Income Analyzer", icon: Calculator },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
+];
+
+const CALC_NAV: NavItem[] = [
+  { to: "/calculators/buydown", label: "Buydown Calculator", icon: Percent },
 ];
 
 const OPS_NAV: NavItem[] = [
@@ -98,6 +103,28 @@ export function AppSidebar() {
         <div className="px-3 mb-1 text-hud text-[10px] text-muted-foreground">PLATFORM</div>
         <div className="space-y-0.5 px-2">
           {NAV.map((item) => {
+            const active = isActive(item.to, item.exact);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to as never}
+                className={`flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-all ${
+                  active
+                    ? "bg-cyan/10 text-cyan border-l-2 border-cyan"
+                    : "text-muted-foreground hover:bg-panel hover:text-foreground border-l-2 border-transparent"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-hud text-xs">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="px-3 mt-5 mb-1 text-hud text-[10px] text-muted-foreground">CALCULATORS</div>
+        <div className="space-y-0.5 px-2">
+          {CALC_NAV.map((item) => {
             const active = isActive(item.to, item.exact);
             const Icon = item.icon;
             return (
