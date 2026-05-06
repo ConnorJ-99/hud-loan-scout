@@ -18,6 +18,7 @@ import {
   TrendingUp,
   UserCog,
   Target,
+  Percent,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,10 @@ const NAV: NavItem[] = [
   { to: "/income-analyzer", label: "Income Analyzer", icon: Calculator },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
+];
+
+const CALC_NAV: NavItem[] = [
+  { to: "/calculators/buydown", label: "Buydown Calculator", icon: Percent },
 ];
 
 const OPS_NAV: NavItem[] = [

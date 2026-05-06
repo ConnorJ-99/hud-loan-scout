@@ -23,6 +23,7 @@ import { Route as AuthenticatedBorrowersIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedOpsLoansRouteImport } from './routes/_authenticated/ops.loans'
 import { Route as AuthenticatedOpsLeadsRouteImport } from './routes/_authenticated/ops.leads'
 import { Route as AuthenticatedIncomeAnalyzerIdRouteImport } from './routes/_authenticated/income-analyzer.$id'
+import { Route as AuthenticatedCalculatorsBuydownRouteImport } from './routes/_authenticated/calculators.buydown'
 import { Route as AuthenticatedBorrowersIdRouteImport } from './routes/_authenticated/borrowers.$id'
 import { Route as ApiPublicHooksAutoPayrollRouteImport } from './routes/api/public/hooks/auto-payroll'
 import { Route as AuthenticatedOpsLoansIdRouteImport } from './routes/_authenticated/ops.loans.$id'
@@ -107,6 +108,12 @@ const AuthenticatedIncomeAnalyzerIdRoute =
     path: '/income-analyzer/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCalculatorsBuydownRoute =
+  AuthenticatedCalculatorsBuydownRouteImport.update({
+    id: '/calculators/buydown',
+    path: '/calculators/buydown',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedBorrowersIdRoute =
   AuthenticatedBorrowersIdRouteImport.update({
     id: '/borrowers/$id',
@@ -181,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
+  '/calculators/buydown': typeof AuthenticatedCalculatorsBuydownRoute
   '/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
   '/ops/leads': typeof AuthenticatedOpsLeadsRouteWithChildren
   '/ops/loans': typeof AuthenticatedOpsLoansRouteWithChildren
@@ -207,6 +215,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
   '/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
+  '/calculators/buydown': typeof AuthenticatedCalculatorsBuydownRoute
   '/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
   '/ops/leads': typeof AuthenticatedOpsLeadsRouteWithChildren
   '/ops/loans': typeof AuthenticatedOpsLoansRouteWithChildren
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/borrowers/$id': typeof AuthenticatedBorrowersIdRoute
+  '/_authenticated/calculators/buydown': typeof AuthenticatedCalculatorsBuydownRoute
   '/_authenticated/income-analyzer/$id': typeof AuthenticatedIncomeAnalyzerIdRoute
   '/_authenticated/ops/leads': typeof AuthenticatedOpsLeadsRouteWithChildren
   '/_authenticated/ops/loans': typeof AuthenticatedOpsLoansRouteWithChildren
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/borrowers/$id'
+    | '/calculators/buydown'
     | '/income-analyzer/$id'
     | '/ops/leads'
     | '/ops/loans'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/'
     | '/borrowers/$id'
+    | '/calculators/buydown'
     | '/income-analyzer/$id'
     | '/ops/leads'
     | '/ops/loans'
@@ -316,6 +328,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/'
     | '/_authenticated/borrowers/$id'
+    | '/_authenticated/calculators/buydown'
     | '/_authenticated/income-analyzer/$id'
     | '/_authenticated/ops/leads'
     | '/_authenticated/ops/loans'
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIncomeAnalyzerIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/calculators/buydown': {
+      id: '/_authenticated/calculators/buydown'
+      path: '/calculators/buydown'
+      fullPath: '/calculators/buydown'
+      preLoaderRoute: typeof AuthenticatedCalculatorsBuydownRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/borrowers/$id': {
       id: '/_authenticated/borrowers/$id'
       path: '/borrowers/$id'
@@ -555,6 +575,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBorrowersIdRoute: typeof AuthenticatedBorrowersIdRoute
+  AuthenticatedCalculatorsBuydownRoute: typeof AuthenticatedCalculatorsBuydownRoute
   AuthenticatedIncomeAnalyzerIdRoute: typeof AuthenticatedIncomeAnalyzerIdRoute
   AuthenticatedOpsLeadsRoute: typeof AuthenticatedOpsLeadsRouteWithChildren
   AuthenticatedOpsLoansRoute: typeof AuthenticatedOpsLoansRouteWithChildren
@@ -577,6 +598,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBorrowersIdRoute: AuthenticatedBorrowersIdRoute,
+  AuthenticatedCalculatorsBuydownRoute: AuthenticatedCalculatorsBuydownRoute,
   AuthenticatedIncomeAnalyzerIdRoute: AuthenticatedIncomeAnalyzerIdRoute,
   AuthenticatedOpsLeadsRoute: AuthenticatedOpsLeadsRouteWithChildren,
   AuthenticatedOpsLoansRoute: AuthenticatedOpsLoansRouteWithChildren,
