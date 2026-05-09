@@ -20,6 +20,7 @@ const STATUS_COLOR: Record<MatchResult["status"], string> = {
   "STRONG MATCH": "border-success/60 text-success bg-success/10",
   "POSSIBLE MATCH": "border-cyan/60 text-cyan bg-cyan/10",
   "CONDITIONAL MATCH": "border-warn/60 text-warn bg-warn/10",
+  "FILTERED": "border-destructive/60 text-destructive bg-destructive/10",
 };
 
 function MatchGauge({ score }: { score: number }) {
