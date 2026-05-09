@@ -151,6 +151,13 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
             <input type="checkbox" checked={filterDPA} onChange={(e) => setFilterDPA(e.target.checked)} className="accent-cyan" />
             DPA only
           </label>
+          <button
+            onClick={() => setDebugMode((v) => !v)}
+            className={`flex items-center gap-1 rounded-sm border px-2 py-1 text-[10px] text-hud transition ${debugMode ? "border-destructive bg-destructive/10 text-destructive" : "border-border text-muted-foreground hover:border-destructive/60 hover:text-destructive"}`}
+            title="Show why each product was filtered out"
+          >
+            <Bug className="h-3 w-3" /> Debug {debugMode ? "ON" : "OFF"}
+          </button>
         </div>
       </div>
 
