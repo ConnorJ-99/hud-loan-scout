@@ -2,17 +2,19 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Lender, LenderProduct, IncomeType, PropertyType, Occupancy, LoanType, SpecialNeed } from "./types";
 
 /**
- * Infer a sensible default max DTI when the DB value is NULL,
- * based on the loan types stored on the program.
+ * Infer a sensible default max DTI when the DB value is NULL.
+ * Returns null when the loan type doesn't match a known category — in that case
+ * the DTI hard filter is skipped entirely instead of defaulting to a strict 50.
  */
-function inferDefaultDti(loanTypes: string[]): number {
+function inferDefaultDti(loanTypes: string[]): number | null {
   const lt = loanTypes.map((t) => t.toLowerCase());
   if (lt.some((t) => t.includes("dscr") || t.includes("hard money") || t.includes("bridge"))) return 0; // N/A
   if (lt.some((t) => t.includes("fha"))) return 56.9;
   if (lt.some((t) => t.includes("va"))) return 60;
   if (lt.some((t) => t.includes("usda"))) return 41;
-  // Conventional / Jumbo / generic
-  return 50;
+  if (lt.some((t) => t.includes("conventional") || t.includes("jumbo") || t.includes("full doc"))) return 50;
+  // Unknown category — skip the DTI hard filter for this product
+  return null;
 }
 
 export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products: LenderProduct[] }> {
@@ -42,7 +44,26 @@ export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products
     const products: LenderProduct[] = dbPrograms.map((p) => {
       const rawLoanTypes = (p.loan_types as string[]) ?? [];
       const dtiFromDb = p.max_dti != null ? Number(p.max_dti) : null;
-      const maxDti = dtiFromDb ?? inferDefaultDti(rawLoanTypes);
+      const inferred = dtiFromDb ?? inferDefaultDti(rawLoanTypes);
+      // 0 means "skip DTI filter" (used by scoreProduct for DSCR/Hard Money/Bridge/unknown).
+      const maxDti = inferred ?? 0;
+
+      // --- Data audit warnings ---
+      const label = `[catalog audit] ${p.product_name ?? p.id}`;
+      if (dtiFromDb == null) {
+        console.warn(`${label}: max_dti is NULL — inferred ${maxDti === 0 ? "N/A (skipped)" : maxDti}`);
+      }
+      if (rawLoanTypes.length === 0) {
+        console.warn(`${label}: loan_types is empty — product will not match any loan-type preference`);
+      }
+      const incomeTypes = (p.income_types as string[]) ?? [];
+      if (incomeTypes.length === 0) {
+        console.warn(`${label}: income_types is empty — falls through but verify expected docs`);
+      }
+      const nameLower = (p.product_name ?? "").toLowerCase();
+      if (!p.dpa_available && (nameLower.includes("dpa") || nameLower.includes("down payment"))) {
+        console.warn(`${label}: name suggests DPA but dpa_available=false — likely bad data`);
+      }
 
       return {
         id: p.id,
@@ -52,7 +73,7 @@ export async function loadCatalogFromDb(): Promise<{ lenders: Lender[]; products
         minFico: p.min_fico ?? 0,
         maxLtv: Number(p.max_ltv ?? 0),
         maxDti,
-        incomeTypesAllowed: (p.income_types as IncomeType[]) ?? [],
+        incomeTypesAllowed: incomeTypes as IncomeType[],
         propertyTypesAllowed: (p.property_types as PropertyType[]) ?? [],
         loanTypes: rawLoanTypes as LoanType[],
         dpaAvailable: !!p.dpa_available,

@@ -69,7 +69,7 @@ export interface Lender {
 export interface MatchResult {
   productId: string;
   matchScore: number;
-  status: "STRONG MATCH" | "POSSIBLE MATCH" | "CONDITIONAL MATCH";
+  status: "STRONG MATCH" | "POSSIBLE MATCH" | "CONDITIONAL MATCH" | "FILTERED";
   highlights: string[];
   caveats: string[];
 }

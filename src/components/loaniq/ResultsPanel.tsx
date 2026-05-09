@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BorrowerScenario, Lender, LenderProduct, MatchResult, LoanType } from "@/lib/loaniq/types";
-import { Flag, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { Flag, ChevronRight, Sparkles, Loader2, Bug } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { store } from "@/lib/loaniq/storage";
 import { toast } from "sonner";
+import { rankMatchesDebug } from "@/lib/loaniq/match";
 
 interface Props {
   scenario: BorrowerScenario | null;
@@ -20,6 +21,7 @@ const STATUS_COLOR: Record<MatchResult["status"], string> = {
   "STRONG MATCH": "border-success/60 text-success bg-success/10",
   "POSSIBLE MATCH": "border-cyan/60 text-cyan bg-cyan/10",
   "CONDITIONAL MATCH": "border-warn/60 text-warn bg-warn/10",
+  "FILTERED": "border-destructive/60 text-destructive bg-destructive/10",
 };
 
 function MatchGauge({ score }: { score: number }) {
@@ -50,6 +52,13 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
   const [drawerProduct, setDrawerProduct] = useState<LenderProduct | null>(null);
   const [shortlist, setShortlist] = useState<string[]>([]);
   const [showAI, setShowAI] = useState(true);
+  const [debugMode, setDebugMode] = useState(false);
+  const [showFiltered, setShowFiltered] = useState(true);
+
+  const debugFiltered = useMemo(() => {
+    if (!debugMode || !scenario) return [];
+    return rankMatchesDebug(scenario, products).filtered;
+  }, [debugMode, scenario, products]);
 
   useEffect(() => { setShortlist(store.getShortlist()); }, []);
 
@@ -142,6 +151,13 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
             <input type="checkbox" checked={filterDPA} onChange={(e) => setFilterDPA(e.target.checked)} className="accent-cyan" />
             DPA only
           </label>
+          <button
+            onClick={() => setDebugMode((v) => !v)}
+            className={`flex items-center gap-1 rounded-sm border px-2 py-1 text-[10px] text-hud transition ${debugMode ? "border-destructive bg-destructive/10 text-destructive" : "border-border text-muted-foreground hover:border-destructive/60 hover:text-destructive"}`}
+            title="Show why each product was filtered out"
+          >
+            <Bug className="h-3 w-3" /> Debug {debugMode ? "ON" : "OFF"}
+          </button>
         </div>
       </div>
 
@@ -203,7 +219,44 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
                       <Flag className="h-3 w-3" />
                       {flagged ? "Flagged" : "Flag"}
                     </button>
+      </div>
+
+      {debugMode && debugFiltered.length > 0 && (
+        <div className="hud-panel rounded-md p-3 border-destructive/40">
+          <button onClick={() => setShowFiltered((v) => !v)} className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Bug className="h-4 w-4 text-destructive" />
+              <span className="text-hud text-xs text-destructive">FILTERED OUT (DEBUG) — {debugFiltered.length}</span>
+            </div>
+            <ChevronRight className={`h-4 w-4 text-muted-foreground transition ${showFiltered ? "rotate-90" : ""}`} />
+          </button>
+          {showFiltered && (
+            <div className="mt-3 grid gap-2">
+              {debugFiltered.map((m) => {
+                const p = productById[m.productId];
+                const l = p ? lenderById[p.lenderId] : undefined;
+                if (!p) return null;
+                return (
+                  <div key={p.id} className="rounded-sm border border-destructive/30 bg-destructive/5 p-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-hud text-[10px] text-muted-foreground">{l?.name ?? "—"}</div>
+                        <div className="text-sm font-medium text-foreground truncate">{p.productName}</div>
+                      </div>
+                      <span className="shrink-0 rounded-sm border border-destructive/60 bg-destructive/10 px-1.5 py-0.5 text-hud text-[9px] text-destructive">
+                        {m.filterReason ?? "filtered"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-mono text-destructive/90">
+                      {m.filterDetail ?? "—"}
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
                 </div>
               </div>
             </div>
