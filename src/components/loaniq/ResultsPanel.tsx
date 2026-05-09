@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BorrowerScenario, Lender, LenderProduct, MatchResult, LoanType } from "@/lib/loaniq/types";
-import { Flag, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { Flag, ChevronRight, Sparkles, Loader2, Bug } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { store } from "@/lib/loaniq/storage";
 import { toast } from "sonner";
+import { rankMatchesDebug } from "@/lib/loaniq/match";
 
 interface Props {
   scenario: BorrowerScenario | null;
