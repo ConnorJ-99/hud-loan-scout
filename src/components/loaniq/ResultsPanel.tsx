@@ -52,6 +52,13 @@ export function ResultsPanel({ scenario, matches, lenders, products, scanning, a
   const [drawerProduct, setDrawerProduct] = useState<LenderProduct | null>(null);
   const [shortlist, setShortlist] = useState<string[]>([]);
   const [showAI, setShowAI] = useState(true);
+  const [debugMode, setDebugMode] = useState(false);
+  const [showFiltered, setShowFiltered] = useState(true);
+
+  const debugFiltered = useMemo(() => {
+    if (!debugMode || !scenario) return [];
+    return rankMatchesDebug(scenario, products).filtered;
+  }, [debugMode, scenario, products]);
 
   useEffect(() => { setShortlist(store.getShortlist()); }, []);
 
