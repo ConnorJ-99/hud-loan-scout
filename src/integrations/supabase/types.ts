@@ -150,9 +150,14 @@ export type Database = {
       }
       borrower_files: {
         Row: {
+          assigned_lo_email: string | null
+          assigned_lo_name: string | null
+          assigned_lo_nmls: string | null
+          assigned_lo_user_id: string | null
           borrower_name: string
           created_at: string
           created_by: string
+          discovery_answers: Json | null
           email: string | null
           id: string
           loan_amount: number | null
@@ -160,16 +165,25 @@ export type Database = {
           loan_purpose: string | null
           notes: string | null
           phone: string | null
+          prequal_scenario: Json | null
           property_address: string | null
           purchase_price: number | null
           status: string
+          suggestions: Json | null
+          suggestions_narrative: string | null
+          suggestions_updated_at: string | null
           target_program: string | null
           updated_at: string
         }
         Insert: {
+          assigned_lo_email?: string | null
+          assigned_lo_name?: string | null
+          assigned_lo_nmls?: string | null
+          assigned_lo_user_id?: string | null
           borrower_name: string
           created_at?: string
           created_by: string
+          discovery_answers?: Json | null
           email?: string | null
           id?: string
           loan_amount?: number | null
@@ -177,16 +191,25 @@ export type Database = {
           loan_purpose?: string | null
           notes?: string | null
           phone?: string | null
+          prequal_scenario?: Json | null
           property_address?: string | null
           purchase_price?: number | null
           status?: string
+          suggestions?: Json | null
+          suggestions_narrative?: string | null
+          suggestions_updated_at?: string | null
           target_program?: string | null
           updated_at?: string
         }
         Update: {
+          assigned_lo_email?: string | null
+          assigned_lo_name?: string | null
+          assigned_lo_nmls?: string | null
+          assigned_lo_user_id?: string | null
           borrower_name?: string
           created_at?: string
           created_by?: string
+          discovery_answers?: Json | null
           email?: string | null
           id?: string
           loan_amount?: number | null
@@ -194,9 +217,13 @@ export type Database = {
           loan_purpose?: string | null
           notes?: string | null
           phone?: string | null
+          prequal_scenario?: Json | null
           property_address?: string | null
           purchase_price?: number | null
           status?: string
+          suggestions?: Json | null
+          suggestions_narrative?: string | null
+          suggestions_updated_at?: string | null
           target_program?: string | null
           updated_at?: string
         }
@@ -916,6 +943,7 @@ export type Database = {
           id: string
           monthly_draw: number
           monthly_salary: number
+          nmls: string | null
           pay_day: number | null
           pay_frequency: string
           updated_at: string
@@ -935,6 +963,7 @@ export type Database = {
           id?: string
           monthly_draw?: number
           monthly_salary?: number
+          nmls?: string | null
           pay_day?: number | null
           pay_frequency?: string
           updated_at?: string
@@ -954,6 +983,7 @@ export type Database = {
           id?: string
           monthly_draw?: number
           monthly_salary?: number
+          nmls?: string | null
           pay_day?: number | null
           pay_frequency?: string
           updated_at?: string
