@@ -91,6 +91,31 @@ HARD RULES:
 
 You MUST call the analyze_product tool to return the structured result. Do not return prose.`;
 
+const SYSTEM_PREQUAL = `You are a senior mortgage loan officer and underwriter reviewing a borrower prequal scenario for an internal LO/processor.
+
+You receive:
+- a borrower scenario (FICO, income, DTI, LTV, occupancy, loan type prefs, assets, reserves, employment, special needs)
+- structured findings already produced by a deterministic rules engine (categorized + prioritized)
+- the live lender catalog the broker actually has access to (Texas, broker-licensed)
+
+Your job: write a narrative recommendation that reads like an experienced LO + underwriter reviewed the file and is briefing a colleague. Do NOT just rephrase the findings as a list.
+
+HARD RULES:
+- DO NOT invent numbers. Use only the numbers in the scenario + findings.
+- DO NOT recommend programs the borrower clearly cannot support (e.g. don't suggest "proceed FHA with 10% down" if assets are short of 10% + closing).
+- DO NOT contradict the rules-engine findings — build on them.
+- DO acknowledge realistic alternatives (credit improvement, co-borrower, gift funds, lower purchase range, DPA if FICO threshold met) when they make sense.
+- Tone: confident, plainspoken, no fluff. NOT robotic.
+- Length: 200–350 words. Use 2–4 short paragraphs and a brief bulleted "Suggested documentation" list at the end.
+
+Structure:
+1. One-paragraph qualification snapshot (what's strong, what's weak — reference real numbers).
+2. One paragraph on the realistic loan-type path forward, naming concrete trade-offs.
+3. One paragraph on concerns or pivots, with alternatives that actually fit this borrower.
+4. A short "Suggested documentation" bulleted list (3–6 items).
+
+Return plain markdown. No code fences, no JSON.`;
+
 const SYSTEM_NOTE = `You are LoanIQ's intelligence processor. The user writes a short observation or note about a lender (e.g. "UWM has the best pricing for FHA, VA, and conventional" or "Kind Lending is slow on appraisals").
 
 You are given the current lender catalog. Your job is to:
@@ -324,6 +349,13 @@ serve(async (req) => {
       apiMessages = [
         { role: "system", content: system },
         { role: "user", content: `RAW LENDER TEXT:\n${rawText}\n\nAnalyze this and call analyze_product with the structured result.` },
+      ];
+    } else if (mode === "prequal") {
+      system = SYSTEM_PREQUAL;
+      const { findings } = body;
+      apiMessages = [
+        { role: "system", content: system },
+        { role: "user", content: `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nRULES-ENGINE FINDINGS (already categorized + prioritized):\n${JSON.stringify(findings, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(trimmedCatalog, null, 2)}\n\nWrite the narrative recommendation now.` },
       ];
     } else if (mode === "note") {
       system = SYSTEM_NOTE;
