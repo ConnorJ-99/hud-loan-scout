@@ -350,6 +350,13 @@ serve(async (req) => {
         { role: "system", content: system },
         { role: "user", content: `RAW LENDER TEXT:\n${rawText}\n\nAnalyze this and call analyze_product with the structured result.` },
       ];
+    } else if (mode === "prequal") {
+      system = SYSTEM_PREQUAL;
+      const { findings } = body;
+      apiMessages = [
+        { role: "system", content: system },
+        { role: "user", content: `BORROWER SCENARIO:\n${JSON.stringify(scenario, null, 2)}\n\nRULES-ENGINE FINDINGS (already categorized + prioritized):\n${JSON.stringify(findings, null, 2)}\n\nLENDER CATALOG:\n${JSON.stringify(trimmedCatalog, null, 2)}\n\nWrite the narrative recommendation now.` },
+      ];
     } else if (mode === "note") {
       system = SYSTEM_NOTE;
       apiMessages = [
